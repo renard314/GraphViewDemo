@@ -1,0 +1,8 @@
+.cproject
+.settings/
+.project
+.DS_Store
+obj/*
+bin/*
+gen/*
+libs/*

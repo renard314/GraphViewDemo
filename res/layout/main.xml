@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+    <fragment
+    	class="de.inovex.graph.demo.DataListFragment"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:id="@+id/data_list_fragment"
+        android:layout_weight="25">
+    </fragment>
+    <fragment
+    	class="de.inovex.graph.demo.GraphFragment"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:id="@+id/graph_fragment"
+        android:layout_weight="75">
+    </fragment>
+</LinearLayout>
