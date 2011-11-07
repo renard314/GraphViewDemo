@@ -65,7 +65,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 35;
+		private static final int DATABASE_VERSION = 40;
 
 		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " + Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
 				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, " + Columns.Locations.CREATED + " INTEGER, " + Columns.Locations.NAME + " TEXT, " + Columns.Locations.TYPE
@@ -186,7 +186,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		case LOCATIONS:
 			tableName = DBHelper.LOCATION_TABLE_NAME;
 			columnCreated = Columns.Locations.CREATED;
-			//notifyUri = CONTENT_URI_PLACES;
+			notifyUri = CONTENT_URI_PLACES;
 			break;
 		default:
 			throw new IllegalArgumentException("Unknown URI " + uri);
@@ -201,10 +201,10 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		long rowId = db.insert(tableName, null, values);
 		if (rowId > 0) {
 			Uri entryUri = ContentUris.withAppendedId(uri, rowId);
-//			if (notifyUri!=null) {
-//				getContext().getContentResolver().notifyChange(uri, null);
-//				getContext().getContentResolver().notifyChange(notifyUri, null);
-//			}
+			if (notifyUri!=null) {
+				getContext().getContentResolver().notifyChange(entryUri, null);
+				getContext().getContentResolver().notifyChange(notifyUri, null);
+			}
 			return entryUri;
 		} else {
 			throw new SQLException("Failed to insert row into " + uri);

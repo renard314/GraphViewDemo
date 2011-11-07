@@ -1,27 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
     <fragment
     	class="de.inovex.graph.demo.DataListFragment"
-        android:layout_width="0dp"
+        android:layout_width="250dp"
         android:layout_height="match_parent"
-        android:id="@+id/data_list_fragment"
-        android:layout_weight="25">
+        android:id="@+id/data_list_fragment">
+        <!-- Preview: layout=@layout/list_item -->
     </fragment>
     <fragment
     	class="de.inovex.graph.demo.GraphFragment"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/graph_fragment"
-        android:layout_weight="75">
+        android:layout_toRightOf="@+id/data_list_fragment"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/update_fragment"
+        android:id="@+id/graph_fragment">
+        <!-- Preview: layout=@layout/graph_fragment -->
     </fragment>
-    <Button android:gravity="top" 
-    	android:layout_width="wrap_content" 
-    	android:text="Refresh" 
-    	android:layout_height="wrap_content" 
-    	android:id="@+id/buttonRefresh" >
-    </Button>
-</LinearLayout>
+    <fragment
+    	class="de.inovex.graph.demo.UpdateFragment"
+        android:layout_width="100dip"
+        android:layout_height="50dip"
+        android:layout_alignParentRight="true"
+        android:layout_toRightOf="@+id/data_list_fragment"
+        android:layout_alignParentTop="true"
+        android:id="@+id/update_fragment">
+    </fragment>
+
+</RelativeLayout>

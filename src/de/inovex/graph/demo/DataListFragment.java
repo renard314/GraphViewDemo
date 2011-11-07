@@ -5,10 +5,9 @@ import android.app.ListFragment;
 import android.content.CursorLoader;
 import android.content.Loader;
 import android.content.Loader.OnLoadCompleteListener;
-import android.database.ContentObserver;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.CursorAdapter;
 import android.widget.ListView;
@@ -29,26 +28,9 @@ public class DataListFragment extends ListFragment implements OnLoadCompleteList
 		public void onListItemSelected(long locationId);
 	}
 
-	private class LocationContentObserver extends ContentObserver {
-
-		public LocationContentObserver(Handler handler) {
-			super(handler);
-		}
-
-		@Override
-		public void onChange(boolean selfChange) {
-			super.onChange(selfChange);
-			if (mCursor != null && mCursorLoader!=null) {
-				mCursorLoader.startLoading();
-			}
-		}
-
-	}
-
 	private ListItemSelectedListener mListener;
-	private long index = 0;
-	private LocationContentObserver mContentObserver = new LocationContentObserver(new Handler());
-	private Cursor mCursor = null;
+	private int index = 0;
+	private CursorAdapter mAdapter = null;
 
 	@Override
 	public void onActivityCreated(Bundle savedInstanceState) {
@@ -83,35 +65,25 @@ public class DataListFragment extends ListFragment implements OnLoadCompleteList
 	@Override
 	public void onListItemClick(ListView l, View v, int position, long id) {
 		super.onListItemClick(l, v, position, id);
-		index = id;
+		index = (int)id;
 		mListener.onListItemSelected(id);
-	}
-
-	@Override
-	public void onPause() {
-		super.onPause();
-		getActivity().getContentResolver().unregisterContentObserver(mContentObserver);
-	}
-
-	@Override
-	public void onResume() {
-		super.onResume();
-		getActivity().getContentResolver().registerContentObserver(RWELiveDataContentProvider.CONTENT_URI_PLACES, true, mContentObserver);
 	}
 
 	@Override
 	public void onLoadComplete(Loader<Cursor> loader, Cursor cursor) {
 
-		if (cursor != null) {
+		Log.i("DataListFragment","OnLoadComplete");
+		
+		if (mAdapter == null) {
 			String[] from = { RWELiveDataContentProvider.Columns.Locations.NAME };
 			int[] to = { R.id.textviewName };
 
-			CursorAdapter adapter = new SimpleCursorAdapter(getActivity(), R.layout.list_item, cursor, from, to);
-			setListAdapter(adapter);
-
-			mCursor = cursor;
+			mAdapter = new SimpleCursorAdapter(getActivity(), R.layout.list_item, cursor, from, to);
+			setListAdapter(mAdapter);
 
 			mListener.onListItemSelected(index);
+		} else {
+			mAdapter.changeCursor(cursor);
 		}
 
 	}

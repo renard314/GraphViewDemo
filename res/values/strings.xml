@@ -1,5 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <resources>
     <string name="hello">Hello World, MainActivity!</string>
     <string name="app_name">InteractiveGraphView</string>
+    <string name="update_counter_text">Nächstes Update in:</string>
+    <string name="update_places_text">%1$d Standorte aktualisiert</string>
 </resources>

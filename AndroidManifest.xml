@@ -16,7 +16,7 @@
         </activity>
 
 		<provider android:name=".contentprovider.RWELiveDataContentProvider" android:authorities="de.inovex.graph.demo" android:exported="false" />
-		<receiver android:name=".receiver.AlarmReceiver"></receiver>
+		<receiver android:name=".AlarmReceiver"></receiver>
 		<service android:name=".service.DownloadService">
 			<intent-filter>
 				<action android:name=".service.DownloadService"></action>

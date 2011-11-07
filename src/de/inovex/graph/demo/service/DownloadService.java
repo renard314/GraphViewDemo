@@ -1,9 +1,6 @@
 package de.inovex.graph.demo.service;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -28,7 +25,14 @@ import android.util.Log;
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
 
 public class DownloadService extends IntentService {
-
+	
+	public static final String STATUS_EXTRA = "status";
+	public static final String VALUE_EXTRA = "value";
+	public static final int STATUS_IN_PROGRESS = 0;
+	public static final int STATUS_FINISHED = 1;
+	public static final int STATUS_PROGRESS_START = 2;
+	public static final String UPDATE_ACTION = "PRODUCTION_DATA_UPDATE";
+	
 	private class LiveDataContentHandler implements ContentHandler {
 		
 		ContentValues mLocation = null;
@@ -52,7 +56,7 @@ public class DownloadService extends IntentService {
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.VALUE, production);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.CREATED, mCurrentMillis);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.LOCATION_ID, mCurrentLocationId);
-					Log.i("DownloadService", "Got new mProduction value: " + mProduction.toString());
+					Log.i("DownloadService", "Got new Production value: " + mProduction.toString());
 				}
 			}
 			if (mCurrentTagName.equals("name")) {
@@ -72,6 +76,7 @@ public class DownloadService extends IntentService {
 		@Override
 		public void endDocument() throws SAXException {
 			if (mProductionList.size() > 0) {
+				sendUpdateBroadCast(STATUS_FINISHED,mProduction.size());
 				int numInserted = getContentResolver().bulkInsert(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION, mProductionList.toArray(new ContentValues[mProductionList.size()]));
 				getContentResolver().notifyChange(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL_MINUTE, null);
 				Log.i("DownloadService", "Inserted " + numInserted + " production values!");
@@ -86,10 +91,12 @@ public class DownloadService extends IntentService {
 		@Override
 		public void endElement(String uri, String localName, String qName) throws SAXException {
 			if (localName.equals("location")){
-				Log.i("DownloadService",mLocation.toString());
+				Log.i("DownloadService","Got new Location: " + mLocation.toString());
 				if (mProduction.size() > 0) {
 					mProductionList.add(mProduction);
-					mLocationList.add(mLocation);
+					sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
+					getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
+					//mLocationList.add(mLocation);
 				}
 			}
 		}
@@ -112,6 +119,7 @@ public class DownloadService extends IntentService {
 		@Override
 		public void startDocument() throws SAXException {
 			mCurrentMillis = System.currentTimeMillis();
+			sendUpdateBroadCast(STATUS_PROGRESS_START, 0);
 		}
 
 		@Override
@@ -171,7 +179,7 @@ public class DownloadService extends IntentService {
 		float fval = -1;
 		try {
 			number = number.replace(',', '.').trim();
-			if (number.equals("--")) {
+			if (number.equals("--") || TextUtils.isEmpty(number)) {
 				fval = 0f;
 			} else {
 				fval = Float.valueOf(number);
@@ -185,6 +193,13 @@ public class DownloadService extends IntentService {
 		}
 		return -1;
 	}
+	
+	private void sendUpdateBroadCast(int status,int value){
+		Intent intent = new Intent(UPDATE_ACTION);
+		intent.putExtra(STATUS_EXTRA, status);
+		intent.putExtra(VALUE_EXTRA, value);
+		sendBroadcast(intent);
+	}
 
 	@Override
 	protected void onHandleIntent(Intent intent) {
@@ -192,21 +207,23 @@ public class DownloadService extends IntentService {
 			String urlString = intent.getDataString();
 			try {
 				URL url = new URL(urlString);
-				final int BUFFER_SIZE = 1024*4; // 4k buffer
-				byte[] temp = new byte[BUFFER_SIZE];
-				int bytesRead;
-				Log.i("DOWNLOADING", "START");
-				InputStream buf = url.openStream();
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				while ((bytesRead = buf.read(temp, 0, BUFFER_SIZE)) != -1) {
-				    bos.write(temp, 0, bytesRead);
-				}
-				buf.close();
-				Log.i("DOWNLOADING", "FINISHED");
-				ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-				/* Parse the xml-data from our URL. */
-				//mXmlReader.parse(new InputSource(url.openStream()));
-				mXmlReader.parse(new InputSource(bis));
+//				final int BUFFER_SIZE = 1024*4; // 4k buffer
+//				byte[] temp = new byte[BUFFER_SIZE];
+//				int bytesRead;
+//				Log.i("DOWNLOADING", "START");
+//				InputStream buf = url.openStream();
+//				ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//				while ((bytesRead = buf.read(temp, 0, BUFFER_SIZE)) != -1) {
+//				    bos.write(temp, 0, bytesRead);
+//				}
+//				buf.close();
+//				Log.i("DOWNLOADING", "FINISHED");
+//				ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+//				mXmlReader.parse(new InputSource(bis));
+
+				
+				mXmlReader.parse(new InputSource(url.openStream()));
+				
 				/* Parsing has finished. */
 				// parse(url);
 			} catch (MalformedURLException e) {
