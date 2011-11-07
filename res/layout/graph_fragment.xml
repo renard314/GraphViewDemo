@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.jjoe64.graphview.LineGraphView
+<com.jjoe64.graphs.LineGraphView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/line_graph">
-</com.jjoe64.graphview.LineGraphView>
+</com.jjoe64.graphs.LineGraphView>

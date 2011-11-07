@@ -18,4 +18,10 @@
         android:id="@+id/graph_fragment"
         android:layout_weight="75">
     </fragment>
+    <Button android:gravity="top" 
+    	android:layout_width="wrap_content" 
+    	android:text="Refresh" 
+    	android:layout_height="wrap_content" 
+    	android:id="@+id/buttonRefresh" >
+    </Button>
 </LinearLayout>

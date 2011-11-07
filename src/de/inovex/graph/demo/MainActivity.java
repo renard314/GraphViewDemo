@@ -5,16 +5,36 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-
-import com.jjoe64.graphview.GraphView.GraphViewSeries;
-
+import android.view.View;
+import android.widget.Button;
 import de.inovex.graph.demo.DataListFragment.ListItemSelectedListener;
+import de.inovex.graph.demo.service.DownloadService;
 
 public class MainActivity extends Activity implements Runnable, ListItemSelectedListener {
 
 	private ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 	private GraphFragment mGraphFragment;
+	private Button mButtonRefresh;
+	
+	
+//	public final static String[] sDataSourceNames = {
+//			"Datenquelle 1", 
+//			"Datenquelle 2", 
+//			"Datenquelle 3", 
+//			"Datenquelle 4", 
+//			"Datenquelle 5", 
+//			"Datenquelle 6" };
+//
+//public final static GraphViewSeries[] sDataSources = { 
+//		generateRandomData(1000),
+//		generateRandomData(1000),
+//		generateRandomData(800),
+//		generateRandomData(200),
+//		generateRandomData(1200),
+//		generateRandomData(1000)};
 	
 	/** Called when the activity is first created. */
 	@Override
@@ -22,6 +42,19 @@ public class MainActivity extends Activity implements Runnable, ListItemSelected
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
         mGraphFragment = (GraphFragment) getFragmentManager().findFragmentById(R.id.graph_fragment);
+        mButtonRefresh = (Button)findViewById(R.id.buttonRefresh);
+        mButtonRefresh.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+		        Intent downloader = new Intent(MainActivity.this, DownloadService.class);
+		        downloader.setData(Uri.parse("http://www.rwe.com/app/tso/xmltransfer.aspx?f=innogysites.xml"));
+		        MainActivity.this.startService(downloader);
+		        //mGraphFragment.addRandomValue();
+			}
+		});
+        
+        
 	}
 	
 
@@ -64,11 +97,26 @@ public class MainActivity extends Activity implements Runnable, ListItemSelected
 
 
 
-	public void onListItemSelected(GraphViewSeries series) {
+	public void onListItemSelected(long locationId) {
 
         if (mGraphFragment == null || !mGraphFragment.isInLayout()) {
         } else {
-        	mGraphFragment.toggleSeries(series);
+        	//mGraphFragment.toggleSeries(series);
         }		
 	}
+	
+//	private static int createRandomColor() {
+//		return Color.argb(255,(int)(Math.random()*255),(int)( Math.random()*255), (int)(Math.random()*255));
+//	}
+//	private static GraphViewSeries generateRandomData(int size) {
+//		ArrayList<GraphViewData> result = new ArrayList<GraphViewData>(size);
+//		double lastValue = 2.5;
+//		result.add(new GraphViewData(0, 2.5));
+//		for (int i =  1; i < size; i++){
+//			lastValue = result.get(i-1).valueY;
+//			double offset =  (Math.random()-0.5d)*0.15;
+//			result.add(new GraphViewData(i, lastValue+offset));
+//		}
+//		return new GraphViewSeries(createRandomColor(),result);
+//	}
 }
