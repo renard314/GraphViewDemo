@@ -12,7 +12,6 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
-import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -36,8 +35,13 @@ public class MapView extends View {
 	private int maxX = Integer.MIN_VALUE;
 	private int minY = Integer.MAX_VALUE;
 	private int maxY = Integer.MIN_VALUE;
+	private int minXBorder = Integer.MAX_VALUE;
+	private int maxXBorder = Integer.MIN_VALUE;
+	private int minYBorder = Integer.MAX_VALUE;
+	private int maxYBorder = Integer.MIN_VALUE;
+	
 	private Path mPath = null;
-	private boolean mPointAdded = false;
+	private boolean mPointsNeedSorting = false;
 	private Paint mCirclePaint;
 	private Paint mBorderPaint;
 	private final List<Point> mBorderPoints = new ArrayList<Point>(); 
@@ -55,11 +59,19 @@ public class MapView extends View {
 	
 	private void parseBorderPoints(){
 		int i = 0;
+		String xString,yString;
+		int x,y;
 		while((i=sBorderPoints.indexOf('M',i))>-1){
-			String x = sBorderPoints.substring(i+2, i+5);
-			String y = sBorderPoints.substring(i+9,i+12);
+			xString = sBorderPoints.substring(i+2, i+5);
+			yString = sBorderPoints.substring(i+9,i+12);
+			x = Integer.parseInt(xString)>>1;
+			y = Integer.parseInt(yString)>>1;
+			maxXBorder = Math.max(x, maxXBorder);
+			minXBorder = Math.min(x, minXBorder);
+			maxYBorder = Math.max(y, maxYBorder);
+			minYBorder = Math.min(y, minYBorder);
+			mBorderPoints.add(new Point(x,y));			
 			i+=15;
-			mBorderPoints.add(new Point(Integer.parseInt(x)/2,Integer.parseInt(y)/2));			
 		}
 	}
 	
@@ -89,20 +101,12 @@ public class MapView extends View {
 		invalidate();
 	}
 	public void addPoint(Point p){
-		mPointAdded = true;
+		mPointsNeedSorting = true;
 		mPoints.add(p);
-		if (p.x>maxX){
-			maxX = p.x;
-		}
-		if (p.x<minX){
-			minX = p.x;
-		}
-		if (p.y>maxY){
-			maxY = p.y;
-		}
-		if (p.y<minY){
-			minY = p.y;
-		}
+		maxX = Math.max(p.x, maxX);
+		minX = Math.min(p.x, minX);
+		maxY = Math.max(p.y, maxY);
+		minY = Math.min(p.y, minY);
 	}
 	
 	public void addPoint(int x, int y){
@@ -117,39 +121,62 @@ public class MapView extends View {
 		}
 	}
 	
-	private void updatePath(){
-		if (mPointAdded){
-			Collections.sort(mPoints, mPointComparator);
-			mPointAdded = false;
-		}
+	private void determineOffsetsToCenter(float[] offsets, float scale, final int totalMaxX, final int totalMinX, final int totalMaxY, final int totalMinY){
+		final float scaledW = getWidth()/scale;
+		final float rightSpace = scaledW - (totalMaxX-totalMinX);
+		final float scaledH = getHeight() / scale;
+		final float bottomSpace = scaledH - (totalMaxY-totalMinY);
+		
+		offsets[0] = (int) (-totalMinX + (rightSpace/2));
+		offsets[1] = (int) (-totalMinY + (bottomSpace/2));
+		 
+		
+	}
+	private float determineBestScaleFactor(final int totalMaxX, final int totalMinX, final int totalMaxY, final int totalMinY){
 		final float h = getHeight();
-		final float w = getWidth();
-		final float diffX = maxX-minX;
-		final float diffY = maxY - minY;
+		final float w = getWidth();				
+		final float diffX = totalMaxX-totalMinX;
+		final float diffY = totalMaxY - totalMinY;
 		final float ratioScreen = w/h;
 		final float ratioPointsX = diffX/diffY;
 		final float ratioPointsY = diffY/diffX;
 		final float ratioDiffX = Math.abs(ratioScreen - ratioPointsX);
-		final float ratioDiffY = Math.abs(ratioPointsY - ratioPointsY);
+		final float ratioDiffY = Math.abs(ratioScreen - ratioPointsY);
 		float scale = 0;
 		if (ratioDiffX< ratioDiffY){
 			scale = w/diffX;
 		} else {
 			scale = h/diffY;
 		}
+		return scale;
+	}
+	
+	private void updatePath(){
+		if (mPointsNeedSorting){
+			Collections.sort(mPoints, mPointComparator);
+			mPointsNeedSorting = false;
+		}
+		float[] mappedPoints = new float[2];
+
+		final int totalMaxX = Math.max(maxX, maxXBorder);
+		final int totalMinX = Math.min(minX, minXBorder);
+		final int totalMaxY = Math.max(maxY, maxYBorder);
+		final int totalMinY = Math.min(minY, minYBorder);
+
+		final float scale = determineBestScaleFactor(totalMaxX, totalMinX, totalMaxY, totalMinY);
+		determineOffsetsToCenter(mappedPoints, scale, totalMaxX, totalMinX, totalMaxY, totalMinY);
 		
 		
-		
-		/*transform data points into screen space*/
+		/*transforms data points into screen space*/
 		mViewPortMatrix.reset();
-		//1. scale
-		mViewPortMatrix.postTranslate(-minX, -minY);
+		//1. put map into center of the view
+		mViewPortMatrix.postTranslate(mappedPoints[0] ,mappedPoints[1]);
+		//2. scale points to screen space
 		mViewPortMatrix.postScale(scale,scale);
 		
 		mPath = new Path();
 		mBorderPath = new Path();
 		
-		float[] mappedPoints = new float[2];
 		for(int i = 0; i < mBorderPoints.size(); i++){			
 			mappedPoints[0] = mBorderPoints.get(i).x;
 			mappedPoints[1] = mBorderPoints.get(i).y;
@@ -161,9 +188,7 @@ public class MapView extends View {
 			}
 		}
 		mBorderPath.close();
-//		RectF bounds = new RectF();
-//		mBorderPath.computeBounds(bounds, false);
-		
+
 		for (Point p :mPoints){
 			mappedPoints[0] = p.x;
 			mappedPoints[1] = p.y;
@@ -175,7 +200,7 @@ public class MapView extends View {
 	
 	@Override
 	protected void onDraw(Canvas canvas) {
-		if (mPointAdded){
+		if (mPointsNeedSorting){
 			updatePath();
 		}
 		canvas.drawPath(mPath,mCirclePaint);

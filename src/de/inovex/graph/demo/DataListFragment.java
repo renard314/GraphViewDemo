@@ -7,6 +7,7 @@ import android.content.Loader;
 import android.content.Loader.OnLoadCompleteListener;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.CursorAdapter;
 import android.widget.ListView;
@@ -95,7 +96,10 @@ public class DataListFragment extends ListFragment implements OnLoadCompleteList
 		while(cursor.moveToNext()){
 			x = cursor.getInt(xIndex);
 			y = cursor.getInt(yIndex);
-			map.addPoint(x, y);
+			/** some locations seem to have dummy location data only*/
+			if (x!=100 && y != 100){
+				map.addPoint(x, y);
+			}
 		}
 
 	}

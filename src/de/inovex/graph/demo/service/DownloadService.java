@@ -103,7 +103,7 @@ public class DownloadService extends IntentService {
 						mProductionList.add(mProduction);
 						sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
 						getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
-						Log.i("DownloadService",mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.XPOS) + " | " + mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.YPOS));						
+						//Log.i("DownloadService",mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.XPOS) + " | " + mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.YPOS));						
 					}
 					//mLocationList.add(mLocation);
 				}
