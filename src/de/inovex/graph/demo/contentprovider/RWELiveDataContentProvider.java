@@ -10,6 +10,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
+import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Log;
@@ -21,6 +22,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 	public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY);
 	public static final Uri CONTENT_URI_PLACES = Uri.parse("content://" + AUTHORITY + "/locations");
+	public static final Uri CONTENT_URI_PLACES_COUNT = Uri.parse("content://" + AUTHORITY + "/locations/count");
 	public static final Uri CONTENT_URI_PRODUCTION = Uri.parse("content://" + AUTHORITY + "/production_data");
 	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_MINUTE = Uri.parse("content://" + AUTHORITY + "/production_data/total/minute");
 
@@ -36,6 +38,8 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			public static final String TURBINES = "turbines";
 			public static final String POWER = "power";
 			public static final String LOCATION_ID = "location_id";
+			public static final String XPOS = "xpos";
+			public static final String YPOS = "ypos";
 		}
 
 		public static class ProductionData {
@@ -52,11 +56,13 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	private static final int LOCATION = 1;
 	private static final int LOCATIONS = 2;
 	private static final int PRODUCTION_DATA_TOTAL_MINUTE = 3;
+	private static final int LOCATIONS_COUNT = 4;
 
 	static {
 		sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 		sUriMatcher.addURI(AUTHORITY, "locations/#", LOCATION);
 		sUriMatcher.addURI(AUTHORITY, "locations", LOCATIONS);
+		sUriMatcher.addURI(AUTHORITY, "locations/count", LOCATIONS_COUNT);
 		sUriMatcher.addURI(AUTHORITY, "production_data", PRODUCTION_DATA);
 		sUriMatcher.addURI(AUTHORITY, "production_data/total/minute", PRODUCTION_DATA_TOTAL_MINUTE);
 	}
@@ -65,11 +71,20 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 40;
+		private static final int DATABASE_VERSION = 43;
 
-		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " + Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, " + Columns.Locations.CREATED + " INTEGER, " + Columns.Locations.NAME + " TEXT, " + Columns.Locations.TYPE
-				+ " TEXT, " + Columns.Locations.CITY + " TEXT, " + Columns.Locations.COUNTRY + " TEXT, " + Columns.Locations.GOLIVE + " TEXT, " + Columns.Locations.TURBINES + " INTEGER, "
+		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " 
+				+ Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, "
+				+ Columns.Locations.CREATED + " INTEGER, " 
+				+ Columns.Locations.NAME + " TEXT, "
+				+ Columns.Locations.TYPE + " TEXT, "
+				+ Columns.Locations.CITY + " TEXT, " 
+				+ Columns.Locations.COUNTRY + " TEXT, "
+				+ Columns.Locations.GOLIVE + " TEXT, " 
+				+ Columns.Locations.XPOS + " INTEGER, " 
+				+ Columns.Locations.YPOS + " INTEGER, " 
+				+ Columns.Locations.TURBINES + " INTEGER, "
 				+ Columns.Locations.POWER + " TEXT );";
 
 		private static final String PRODUCTION_DATA_TABLE_CREATE = "CREATE TABLE " + PRODUCTION_DATA_TABLE_NAME + " ( " + Columns.ProductionData.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -98,10 +113,12 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	}
 
 	private DBHelper dbHelper;
+	SQLiteStatement mLocationCounter;
 
 	@Override
 	public boolean onCreate() {
 		dbHelper = new DBHelper(getContext());
+		mLocationCounter = dbHelper.getReadableDatabase().compileStatement("select count(*) from locations;");
 		return true;
 	}
 
@@ -128,6 +145,8 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			qb.setTables(DBHelper.LOCATION_TABLE_NAME);
 			groupBy = Columns.Locations.ID;
 			break;
+		case LOCATIONS_COUNT:
+			return dbHelper.getReadableDatabase().rawQuery("select count(*) from locations", null);
 		default:
 			throw new IllegalArgumentException("Unknown URI " + uri);
 		}

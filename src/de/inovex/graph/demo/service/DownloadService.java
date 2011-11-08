@@ -52,11 +52,11 @@ public class DownloadService extends IntentService {
 			}
 			if (mCurrentTagName.equals("live")) {
 				int production = parseProductionValue(stringValue);
+				
 				if (production > -1) {
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.VALUE, production);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.CREATED, mCurrentMillis);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.LOCATION_ID, mCurrentLocationId);
-					Log.i("DownloadService", "Got new Production value: " + mProduction.toString());
 				}
 			}
 			if (mCurrentTagName.equals("name")) {
@@ -70,6 +70,12 @@ public class DownloadService extends IntentService {
 			}
 			if (mCurrentTagName.equals("power")) {
 				mLocation.put(RWELiveDataContentProvider.Columns.Locations.POWER,stringValue);
+			}
+			if (mCurrentTagName.equals("flashxpos")) {
+				mLocation.put(RWELiveDataContentProvider.Columns.Locations.XPOS,stringValue);				
+			}
+			if (mCurrentTagName.equals("flashypos")) {
+				mLocation.put(RWELiveDataContentProvider.Columns.Locations.YPOS,stringValue);				
 			}
 		}
 
@@ -91,11 +97,14 @@ public class DownloadService extends IntentService {
 		@Override
 		public void endElement(String uri, String localName, String qName) throws SAXException {
 			if (localName.equals("location")){
-				Log.i("DownloadService","Got new Location: " + mLocation.toString());
 				if (mProduction.size() > 0) {
-					mProductionList.add(mProduction);
-					sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
-					getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
+					String currentCountry = mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.COUNTRY).toLowerCase();
+					if (currentCountry.equals("deutschland")){
+						mProductionList.add(mProduction);
+						sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
+						getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
+						Log.i("DownloadService",mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.XPOS) + " | " + mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.YPOS));						
+					}
 					//mLocationList.add(mLocation);
 				}
 			}
@@ -124,7 +133,7 @@ public class DownloadService extends IntentService {
 
 		@Override
 		public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {
-			mCurrentTagName = localName;
+			mCurrentTagName = localName.toLowerCase();
 			if (localName.equals("location")){				
 				mLocation = new ContentValues();
 				mProduction = new ContentValues();
@@ -170,8 +179,8 @@ public class DownloadService extends IntentService {
 	}
 
 
-	int parseProductionValue(String value) {		
-		if (value.equals("noch nicht verfügbar")) {
+	int parseProductionValue(String value) {	
+	if (value.equals("noch nicht verfügbar")) {
 			return -1;
 		}
 		String number = value.substring(0, value.length() - 2);
@@ -206,7 +215,8 @@ public class DownloadService extends IntentService {
 		if (mXmlReader != null) {
 			String urlString = intent.getDataString();
 			try {
-				URL url = new URL(urlString);
+				URL url = new URL(urlString);				
+				mXmlReader.parse(new InputSource(url.openStream()));	
 //				final int BUFFER_SIZE = 1024*4; // 4k buffer
 //				byte[] temp = new byte[BUFFER_SIZE];
 //				int bytesRead;
@@ -220,20 +230,18 @@ public class DownloadService extends IntentService {
 //				Log.i("DOWNLOADING", "FINISHED");
 //				ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
 //				mXmlReader.parse(new InputSource(bis));
-
 				
-				mXmlReader.parse(new InputSource(url.openStream()));
 				
-				/* Parsing has finished. */
-				// parse(url);
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
+				sendUpdateBroadCast(STATUS_FINISHED, -1);
 			} catch (IOException e) {
 				e.printStackTrace();
+				sendUpdateBroadCast(STATUS_FINISHED, -1);
 			} catch (SAXException e) {
 				e.printStackTrace();
+				sendUpdateBroadCast(STATUS_FINISHED, -1);
 			}
 		}
 	}
-
 }

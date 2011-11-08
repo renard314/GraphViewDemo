@@ -7,7 +7,6 @@ import android.content.Loader;
 import android.content.Loader.OnLoadCompleteListener;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.CursorAdapter;
 import android.widget.ListView;
@@ -22,7 +21,7 @@ import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
  */
 public class DataListFragment extends ListFragment implements OnLoadCompleteListener<Cursor> {
 
-	private static final String[] sProjection = { RWELiveDataContentProvider.Columns.Locations.NAME, RWELiveDataContentProvider.Columns.Locations.ID };
+	private static final String[] sProjection = { RWELiveDataContentProvider.Columns.Locations.NAME, RWELiveDataContentProvider.Columns.Locations.ID, RWELiveDataContentProvider.Columns.Locations.XPOS,RWELiveDataContentProvider.Columns.Locations.YPOS };
 	private CursorLoader mCursorLoader = null;
 	public interface ListItemSelectedListener {
 		public void onListItemSelected(long locationId);
@@ -72,9 +71,9 @@ public class DataListFragment extends ListFragment implements OnLoadCompleteList
 	@Override
 	public void onLoadComplete(Loader<Cursor> loader, Cursor cursor) {
 
-		Log.i("DataListFragment","OnLoadComplete");
-		
 		if (mAdapter == null) {
+			fillMapView(cursor);
+
 			String[] from = { RWELiveDataContentProvider.Columns.Locations.NAME };
 			int[] to = { R.id.textviewName };
 
@@ -84,6 +83,19 @@ public class DataListFragment extends ListFragment implements OnLoadCompleteList
 			mListener.onListItemSelected(index);
 		} else {
 			mAdapter.changeCursor(cursor);
+		}
+
+	}
+	private void fillMapView(final Cursor cursor){
+		MapView map = (MapView) getActivity().findViewById(R.id.mapView);
+		cursor.moveToPosition(-1);
+		int xIndex = cursor.getColumnIndex(RWELiveDataContentProvider.Columns.Locations.XPOS);
+		int yIndex = cursor.getColumnIndex(RWELiveDataContentProvider.Columns.Locations.YPOS);
+		int x,y;
+		while(cursor.moveToNext()){
+			x = cursor.getInt(xIndex);
+			y = cursor.getInt(yIndex);
+			map.addPoint(x, y);
 		}
 
 	}

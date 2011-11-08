@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -23,6 +24,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import de.inovex.graph.demo.anim.Rotate3dAnimation;
+import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
 import de.inovex.graph.demo.service.DownloadService;
 
 public class UpdateFragment extends Fragment {
@@ -60,6 +62,13 @@ public class UpdateFragment extends Fragment {
 		mIsShowing = false;
 		mHandler.removeCallbacks(mTicker);
 		
+	}
+	private int getLocationCount(){
+		Cursor c = getActivity().getContentResolver().query(RWELiveDataContentProvider.CONTENT_URI_PLACES_COUNT, null, null,null, null);
+		c.moveToFirst();
+		int total = c.getInt(0);
+		c.close();
+		return total;
 	}
 	
 	public void onUpdateFinished() {
@@ -100,7 +109,6 @@ public class UpdateFragment extends Fragment {
 		public void onReceive(Context context, Intent intent) {
 			int val = intent.getIntExtra(DownloadService.VALUE_EXTRA, 0);
 			int status = intent.getIntExtra(DownloadService.STATUS_EXTRA, 0);
-			Log.i("UpdateReceiver","got progress update: " + val + ", Status = " + status);
 				switch(status){
 				case DownloadService.STATUS_PROGRESS_START:
 					onUpdateStart();
@@ -126,7 +134,12 @@ public class UpdateFragment extends Fragment {
 		mTextViewCountdown = (TextView) mContainer.findViewById(R.id.textViewCountdown);
 		mTextViewProgress = (TextView) mContainer.findViewById(R.id.textViewProgress);
 
-		mProgressBar.setMax(95);
+		int total = getLocationCount();
+		if (total==0){
+			mProgressBar.setMax(95);
+		} else {
+			mProgressBar.setMax(total);			
+		}
 		
 		mContainer.setOnClickListener(new View.OnClickListener() {
 			
@@ -207,7 +220,6 @@ public class UpdateFragment extends Fragment {
 	 *            the end angle of the rotation
 	 */
 	private void applyRotation(int position, float start, float end) {
-		Log.e("Apply rotation", "pos = " + position + ", start = " + start + ", end = " + end);
 		// Find the center of the container
 		final float centerX = mContainer.getWidth() / 2.0f;
 		final float centerY = mContainer.getHeight() / 2.0f;
@@ -261,7 +273,6 @@ public class UpdateFragment extends Fragment {
 			final float centerX = mContainer.getWidth() / 2.0f;
 			final float centerY = mContainer.getHeight() / 2.0f;
 			Rotate3dAnimation rotation;
-			Log.e("SwapViews", "Position = " + mPosition);
 
 			if (mPosition > -1) {
 				mCountdownView.setVisibility(View.GONE);

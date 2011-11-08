@@ -51,8 +51,8 @@ public class GraphFragment extends Fragment implements OnLoadCompleteListener<Cu
 		mGraphView.setDrawBackground(true);
 		mGraphView.setScrollable(true);
 		mGraphView.setScalable(true);
-		mGraphView.setSmoothing(false);
-		mGraphView.setManualYAxisBounds(600000, 300000);
+		mGraphView.setSmoothing(true);
+		mGraphView.setManualYAxisBounds(300000, 50000);
 		return mGraphView;
 	}
 
