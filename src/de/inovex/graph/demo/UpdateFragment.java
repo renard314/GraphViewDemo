@@ -40,7 +40,7 @@ public class UpdateFragment extends Fragment {
 	private final static String mFormat = "mm:ss";
 	private String mProgressMessage;
 	private static final int TIME_TO_UPDATE = 1;
-	private int mUpdateCounter = TIME_TO_UPDATE * 60;
+	private int mUpdateCounter = TIME_TO_UPDATE * 20;
 	private final static int REQUEST_CODE = (int) (Math.random() * 10000);
 	private final UpdateReceiver mUpdateReceiver = new UpdateReceiver();
 	@Override
