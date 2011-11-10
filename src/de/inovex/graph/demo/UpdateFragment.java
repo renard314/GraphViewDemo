@@ -41,8 +41,8 @@ public class UpdateFragment extends Fragment {
 	private Calendar mCalendar;
 	private final static String mFormat = "mm:ss";
 	private String mProgressMessage;
-	private static final int TIME_TO_UPDATE = 1;
-	private int mUpdateCounter = TIME_TO_UPDATE * 20;
+	private static final int TIME_TO_UPDATE = 20; //Time between updates in seconds
+	private int mUpdateCounter = TIME_TO_UPDATE;
 	private final static int REQUEST_CODE = (int) (Math.random() * 10000);
 	private final UpdateReceiver mUpdateReceiver = new UpdateReceiver();
 	@Override
@@ -55,11 +55,9 @@ public class UpdateFragment extends Fragment {
 	}
 
 	public void onUpdateStart() {
-		if (mProgressView.getVisibility() == View.GONE){
-			applyRotation(0, 0, 90);
-		}
-
+		applyRotation(0, 0, 90);
 		mIsShowing = false;
+		mProgressBar.setProgress(0);
 		mHandler.removeCallbacks(mTicker);
 		
 	}
@@ -71,13 +69,12 @@ public class UpdateFragment extends Fragment {
 		return total;
 	}
 	
-	public void onUpdateFinished() {
-		if (mCountdownView.getVisibility() == View.GONE){
-			applyRotation(-1, 0, 90);
-		}
-		mUpdateCounter = TIME_TO_UPDATE * 60;
+	public void onUpdateFinished(int totalCount) {
+		applyRotation(-1, 0, 90);
+		mUpdateCounter = TIME_TO_UPDATE;
 		Log.i("SCHEDULED ALARM", "time to update = " + mCalendar.getTime());
 		mIsShowing = true;
+		mProgressBar.setMax(totalCount);
 		startTicker();
 		scheduleUpdate();
 	}
@@ -92,7 +89,7 @@ public class UpdateFragment extends Fragment {
 	
 	private void scheduleUpdate(){
 		mCalendar.setTimeInMillis(System.currentTimeMillis());
-		mCalendar.add(Calendar.MINUTE, TIME_TO_UPDATE);
+		mCalendar.add(Calendar.SECOND, TIME_TO_UPDATE);
 		
 		Intent intent = new Intent(getActivity(), AlarmReceiver.class);
 		PendingIntent sender = PendingIntent.getBroadcast(this.getActivity(), REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -103,6 +100,11 @@ public class UpdateFragment extends Fragment {
 		
 	}
 
+	/**
+	 * receives updates from DownloadService
+	 * @author renard
+	 *
+	 */
 	private final class UpdateReceiver extends BroadcastReceiver {
 
 		@Override
@@ -114,7 +116,7 @@ public class UpdateFragment extends Fragment {
 					onUpdateStart();
 					break;
 				case DownloadService.STATUS_FINISHED:
-					onUpdateFinished();
+					onUpdateFinished(val);
 					break;
 				case DownloadService.STATUS_IN_PROGRESS:
 					onUpdateProgress(val);
@@ -136,23 +138,10 @@ public class UpdateFragment extends Fragment {
 
 		int total = getLocationCount();
 		if (total==0){
-			mProgressBar.setMax(95);
+			mProgressBar.setMax(42);
 		} else {
 			mProgressBar.setMax(total);			
-		}
-		
-		mContainer.setOnClickListener(new View.OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				if (mProgressView.getVisibility() == View.GONE){
-					applyRotation(0, 0, 90);
-				} else if (mCountdownView.getVisibility() == View.GONE){
-					applyRotation(-1, 0, 90);
-				}
-				
-			}
-		})	;
+		}		
 		return mContainer;
 	}
 
@@ -277,14 +266,10 @@ public class UpdateFragment extends Fragment {
 			if (mPosition > -1) {
 				mCountdownView.setVisibility(View.GONE);
 				mProgressView.setVisibility(View.VISIBLE);
-				mProgressView.requestFocus();
-
 				rotation = new Rotate3dAnimation(90, 0, centerX, centerY, 310.0f, false);
 			} else {
 				mProgressView.setVisibility(View.GONE);
 				mCountdownView.setVisibility(View.VISIBLE);
-				mCountdownView.requestFocus();
-
 				rotation = new Rotate3dAnimation(270, 0, centerX, centerY, 310.0f, false);
 			}
 

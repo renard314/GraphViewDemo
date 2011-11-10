@@ -32,12 +32,13 @@ public class DownloadService extends IntentService {
 	public static final int STATUS_FINISHED = 1;
 	public static final int STATUS_PROGRESS_START = 2;
 	public static final String UPDATE_ACTION = "PRODUCTION_DATA_UPDATE";
+	public static final String NEW_PRODUCTION_DATA_ACTION = "NEW_PRODUCTION_DATA";
 	
 	private class LiveDataContentHandler implements ContentHandler {
 		
 		ContentValues mLocation = null;
 		ContentValues mProduction = null;
-		List<ContentValues> mProductionList = new ArrayList<ContentValues>();
+		ArrayList<ContentValues> mProductionList = new ArrayList<ContentValues>();
 		List<ContentValues> mLocationList = new ArrayList<ContentValues>();
 		String mCurrentTagName = null;
 		String mCurrentLocationId = null;
@@ -57,6 +58,7 @@ public class DownloadService extends IntentService {
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.VALUE, production);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.CREATED, mCurrentMillis);
 					mProduction.put(RWELiveDataContentProvider.Columns.ProductionData.LOCATION_ID, mCurrentLocationId);
+					mLocation.put(RWELiveDataContentProvider.Columns.Locations.LAST_PRODUCTION, production);
 				}
 			}
 			if (mCurrentTagName.equals("name")) {
@@ -82,7 +84,8 @@ public class DownloadService extends IntentService {
 		@Override
 		public void endDocument() throws SAXException {
 			if (mProductionList.size() > 0) {
-				sendUpdateBroadCast(STATUS_FINISHED,mProduction.size());
+				sendUpdateBroadCast(STATUS_FINISHED,mProductionList.size());
+				sendUpdateBroadCast(mProductionList);
 				int numInserted = getContentResolver().bulkInsert(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION, mProductionList.toArray(new ContentValues[mProductionList.size()]));
 				getContentResolver().notifyChange(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL_MINUTE, null);
 				Log.i("DownloadService", "Inserted " + numInserted + " production values!");
@@ -102,10 +105,15 @@ public class DownloadService extends IntentService {
 					if (currentCountry.equals("deutschland")){
 						mProductionList.add(mProduction);
 						sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
-						getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
+						/*wait so that ui can show the progress effect*/
+						try {
+							Thread.sleep(150);
+						} catch (InterruptedException e) {
+						}
+						//getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
+						mLocationList.add(mLocation);
 						//Log.i("DownloadService",mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.XPOS) + " | " + mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.YPOS));						
 					}
-					//mLocationList.add(mLocation);
 				}
 			}
 		}
@@ -128,7 +136,6 @@ public class DownloadService extends IntentService {
 		@Override
 		public void startDocument() throws SAXException {
 			mCurrentMillis = System.currentTimeMillis();
-			sendUpdateBroadCast(STATUS_PROGRESS_START, 0);
 		}
 
 		@Override
@@ -175,13 +182,11 @@ public class DownloadService extends IntentService {
 		} catch (SAXException e) {
 			e.printStackTrace();
 		}
-
 	}
 
-
 	int parseProductionValue(String value) {	
-	if (value.equals("noch nicht verfügbar")) {
-			return -1;
+		if (!TextUtils.isDigitsOnly(value.trim().substring(0,1))){
+			return -1;			
 		}
 		String number = value.substring(0, value.length() - 2);
 		String unit = value.substring(value.length() - 2, value.length()).toLowerCase();
@@ -210,37 +215,29 @@ public class DownloadService extends IntentService {
 		sendBroadcast(intent);
 	}
 
+	private void sendUpdateBroadCast(ArrayList<ContentValues> productionValues){
+		Intent intent = new Intent(NEW_PRODUCTION_DATA_ACTION);
+		intent.putParcelableArrayListExtra(VALUE_EXTRA, productionValues);
+		sendBroadcast(intent);
+	}
+
 	@Override
 	protected void onHandleIntent(Intent intent) {
 		if (mXmlReader != null) {
 			String urlString = intent.getDataString();
 			try {
+				sendUpdateBroadCast(STATUS_PROGRESS_START, 0);
 				URL url = new URL(urlString);				
 				mXmlReader.parse(new InputSource(url.openStream()));	
-//				final int BUFFER_SIZE = 1024*4; // 4k buffer
-//				byte[] temp = new byte[BUFFER_SIZE];
-//				int bytesRead;
-//				Log.i("DOWNLOADING", "START");
-//				InputStream buf = url.openStream();
-//				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-//				while ((bytesRead = buf.read(temp, 0, BUFFER_SIZE)) != -1) {
-//				    bos.write(temp, 0, bytesRead);
-//				}
-//				buf.close();
-//				Log.i("DOWNLOADING", "FINISHED");
-//				ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-//				mXmlReader.parse(new InputSource(bis));
-				
-				
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
-				sendUpdateBroadCast(STATUS_FINISHED, -1);
+				sendUpdateBroadCast(STATUS_FINISHED, 0);
 			} catch (IOException e) {
 				e.printStackTrace();
-				sendUpdateBroadCast(STATUS_FINISHED, -1);
+				sendUpdateBroadCast(STATUS_FINISHED, 0);
 			} catch (SAXException e) {
 				e.printStackTrace();
-				sendUpdateBroadCast(STATUS_FINISHED, -1);
+				sendUpdateBroadCast(STATUS_FINISHED, 0);
 			}
 		}
 	}

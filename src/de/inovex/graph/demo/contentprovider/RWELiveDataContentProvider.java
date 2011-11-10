@@ -40,6 +40,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			public static final String LOCATION_ID = "location_id";
 			public static final String XPOS = "xpos";
 			public static final String YPOS = "ypos";
+			public static final String LAST_PRODUCTION = "last_production";
 		}
 
 		public static class ProductionData {
@@ -71,7 +72,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 43;
+		private static final int DATABASE_VERSION = 54;
 
 		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " 
 				+ Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -84,6 +85,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 				+ Columns.Locations.GOLIVE + " TEXT, " 
 				+ Columns.Locations.XPOS + " INTEGER, " 
 				+ Columns.Locations.YPOS + " INTEGER, " 
+				+ Columns.Locations.LAST_PRODUCTION + " INTEGER, " 
 				+ Columns.Locations.TURBINES + " INTEGER, "
 				+ Columns.Locations.POWER + " TEXT );";
 

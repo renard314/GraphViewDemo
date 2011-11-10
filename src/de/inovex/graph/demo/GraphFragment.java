@@ -2,10 +2,11 @@ package de.inovex.graph.demo;
 
 import java.util.Date;
 
+import android.app.Activity;
 import android.app.Fragment;
+import android.app.LoaderManager;
 import android.content.CursorLoader;
 import android.content.Loader;
-import android.content.Loader.OnLoadCompleteListener;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -13,35 +14,38 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.jjoe64.graphs.LineGraphView;
+import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.GraphViewSeries.GraphViewData;
 
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
 
-public class GraphFragment extends Fragment implements OnLoadCompleteListener<Cursor> {
+public class GraphFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
-	Date mDate = new Date(110, 0, 1);
-	private CursorLoader mCursorLoader = null;
+	private final static String[] sProjection = new String[] { RWELiveDataContentProvider.Columns.ProductionData.CREATED, RWELiveDataContentProvider.Columns.ProductionData.TOTAL };
+	private final static Date sDate = new Date(111, 10, 1);
 	private GraphViewSeries mTotalProductionSeries = null;
+
 
 	private GraphViewData buildDataFromCursor(Cursor cursor) {
 		int valueColumnIndex = cursor.getColumnIndex(RWELiveDataContentProvider.Columns.ProductionData.TOTAL);
 		int createdColumnIndex = cursor.getColumnIndex(RWELiveDataContentProvider.Columns.ProductionData.CREATED);
 		long value = cursor.getLong(valueColumnIndex);
 		long created = cursor.getLong(createdColumnIndex);
-		return new GraphViewData(created - mDate.getTime(), value);
+		return new GraphViewData(created - sDate.getTime(), value);
 	}
 
 	private LineGraphView mGraphView;
-	private static final int VIEWPORT_SIZE = 180 * 60 * 1000;
+	private static final int VIEWPORT_SIZE = 5 * 60 * 1000;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mCursorLoader = new CursorLoader(this.getActivity(), RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL_MINUTE, new String[] { RWELiveDataContentProvider.Columns.ProductionData.CREATED,
-				RWELiveDataContentProvider.Columns.ProductionData.TOTAL }, null, null, RWELiveDataContentProvider.Columns.ProductionData.CREATED + " ASC");
-		mCursorLoader.registerListener(0, this);
-		mCursorLoader.startLoading();
+	}
+	@Override
+	public void onAttach(Activity activity) {
+		super.onAttach(activity);
+		getLoaderManager().initLoader(0, null, this);
 	}
 
 	@Override
@@ -51,74 +55,59 @@ public class GraphFragment extends Fragment implements OnLoadCompleteListener<Cu
 		mGraphView.setDrawBackground(true);
 		mGraphView.setScrollable(true);
 		mGraphView.setScalable(true);
-		mGraphView.setSmoothing(true);
-		mGraphView.setManualYAxisBounds(300000, 50000);
+		mGraphView.setSmoothing(false);
+		mGraphView.setManualYAxisBounds(220000, 160000);		
+		mGraphView.setViewPort(System.currentTimeMillis() - sDate.getTime(), VIEWPORT_SIZE);
 		return mGraphView;
 	}
 
+	
+	public GraphViewSeries getGraphSeries(){
+		return mTotalProductionSeries;
+	}
+	
+	public void setViewPortListener(GraphView.ViewportChangeListener listener){
+		mGraphView.setViewportListener(listener);
+	}
+	
 	@Override
-	public void onLoadComplete(Loader<Cursor> loader, final Cursor cursor) {
+	public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+		return new CursorLoader(this.getActivity(), RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL_MINUTE, sProjection, null, null, RWELiveDataContentProvider.Columns.ProductionData.CREATED + " ASC");
+	}
+
+	@Override
+	public void onLoadFinished(Loader<Cursor> arg0, Cursor cursor) {
 		if (cursor.getCount() == 0) {
 			return;
 		}
 
-		new Thread(new Runnable() {
+		final boolean seriesCreated;
+		if (mTotalProductionSeries == null) {
+			mTotalProductionSeries = new GraphViewSeries();
+			mTotalProductionSeries.setVisible(true);
+			cursor.moveToPosition(-1);
+			seriesCreated = true;
+		} else {
+			cursor.moveToPosition(cursor.getCount() - 2);
+			seriesCreated = false;
+		}
+
+		while (cursor.moveToNext()) {
+			mTotalProductionSeries.add(buildDataFromCursor(cursor));
+		}
+		GraphFragment.this.getActivity().runOnUiThread(new Runnable() {
 
 			@Override
 			public void run() {
-				final boolean seriesCreated;
-				if (mTotalProductionSeries == null) {
-					mTotalProductionSeries = new GraphViewSeries();
-					mTotalProductionSeries.setVisible(true);
-					mGraphView.setViewPortSize(VIEWPORT_SIZE);
-					cursor.moveToPosition(-1);
-					seriesCreated = true;
-				} else {
-					cursor.moveToPosition(cursor.getCount()-2);
-					seriesCreated = false;
+				if (seriesCreated) {
+					mGraphView.addSeries(mTotalProductionSeries);
 				}
-
-				while (cursor.moveToNext()) {
-					mTotalProductionSeries.add(buildDataFromCursor(cursor));
-				}
-				GraphFragment.this.getActivity().runOnUiThread(new Runnable() {
-
-					@Override
-					public void run() {
-						if (seriesCreated) {
-							mGraphView.addSeries(mTotalProductionSeries);
-						} 
-						mGraphView.moveViewPortStartToTheEnd();
-					}
-				});
+				mGraphView.moveViewPortStartToTheEnd();
 			}
-		}).run();
-
+		});
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
-	}
-
-	public void addRandomValue() {
-		double time = System.currentTimeMillis();
-		time = time - mDate.getTime();
-		GraphViewData data = new GraphViewData(time, Math.random() * 1000 + 50000);
-		mGraphView.addToSeries(0, data);
-	}
-
-	@Override
-	public void onResume() {
-		super.onResume();
-	}
-
-	public void toggleSeries(GraphViewSeries series) {
-		mGraphView.toggleSeries(series);
-	}
-
-	public void addSeries(GraphViewSeries series) {
-		mGraphView.addSeries(series);
-	}
+	public void onLoaderReset(Loader<Cursor> arg0) {}
 
 }
