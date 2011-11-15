@@ -24,8 +24,29 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	public static final Uri CONTENT_URI_PLACES = Uri.parse("content://" + AUTHORITY + "/locations");
 	public static final Uri CONTENT_URI_PLACES_COUNT = Uri.parse("content://" + AUTHORITY + "/locations/count");
 	public static final Uri CONTENT_URI_PRODUCTION = Uri.parse("content://" + AUTHORITY + "/production_data");
-	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_MINUTE = Uri.parse("content://" + AUTHORITY + "/production_data/total/minute");
+	public static final Uri CONTENT_URI_PRODUCTION_TOTAL = Uri.parse("content://" + AUTHORITY + "/production_data/total/minute");
+	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_WIND = Uri.parse("content://" + AUTHORITY + "/production_data/total/wind");
+	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_BIO = Uri.parse("content://" + AUTHORITY + "/production_data/total/bio");
+	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_WATER = Uri.parse("content://" + AUTHORITY + "/production_data/total/water");
 
+	public static enum POWER_TYPE{
+		BIOMASS("Biomassekraftwerk"), ONSHORE_WIND("Onshore Windpark"),WATER("Wasserkraftwerk"),CHP_COAL("CHP Kohlekraftwerk"),UNKNOWN("");
+		private String id;
+		private POWER_TYPE(String id){
+			this.id = id;
+			
+		}
+		
+		public static final POWER_TYPE fromString(String name){
+			for(POWER_TYPE type:POWER_TYPE.values()){
+				if (name.contains(type.id)){
+					return type;
+				}
+			}
+			return UNKNOWN;
+		}
+	}
+	
 	public static class Columns {
 		public static class Locations {
 			public static final String ID = "_id";
@@ -56,8 +77,11 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	private static final int PRODUCTION_DATA = 0;
 	private static final int LOCATION = 1;
 	private static final int LOCATIONS = 2;
-	private static final int PRODUCTION_DATA_TOTAL_MINUTE = 3;
+	private static final int PRODUCTION_DATA_TOTAL = 3;
 	private static final int LOCATIONS_COUNT = 4;
+	private static final int PRODUCTION_DATA_TOTAL_WIND = 5;
+	private static final int PRODUCTION_DATA_TOTAL_WATER = 6;
+	private static final int PRODUCTION_DATA_TOTAL_BIO = 7;
 
 	static {
 		sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -65,14 +89,17 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		sUriMatcher.addURI(AUTHORITY, "locations", LOCATIONS);
 		sUriMatcher.addURI(AUTHORITY, "locations/count", LOCATIONS_COUNT);
 		sUriMatcher.addURI(AUTHORITY, "production_data", PRODUCTION_DATA);
-		sUriMatcher.addURI(AUTHORITY, "production_data/total/minute", PRODUCTION_DATA_TOTAL_MINUTE);
+		sUriMatcher.addURI(AUTHORITY, "production_data/total/minute", PRODUCTION_DATA_TOTAL);
+		sUriMatcher.addURI(AUTHORITY, "production_data/total/wind", PRODUCTION_DATA_TOTAL_WIND);
+		sUriMatcher.addURI(AUTHORITY, "production_data/total/water", PRODUCTION_DATA_TOTAL_WATER);
+		sUriMatcher.addURI(AUTHORITY, "production_data/total/bio", PRODUCTION_DATA_TOTAL_BIO);
 	}
 
 	private static class DBHelper extends SQLiteOpenHelper {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 54;
+		private static final int DATABASE_VERSION = 94;
 
 		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " 
 				+ Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -133,7 +160,31 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		String groupBy = null;
 
 		switch (type) {
-		case PRODUCTION_DATA_TOTAL_MINUTE:
+		case PRODUCTION_DATA_TOTAL_WATER:
+			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
+			selection = "l.type LIKE \"%Wasser%\"";
+			sortOrder = "p.created ASC";
+			break;
+		case PRODUCTION_DATA_TOTAL_BIO:
+			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED+ " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
+			selection = "l.type LIKE \"%Bio%\"";
+			sortOrder = "p.created ASC";
+			break;
+		case PRODUCTION_DATA_TOTAL_WIND:
+			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED+ " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
+			selection = "l.type LIKE \"%Wind%\"";
+			sortOrder = "p.created ASC";
+			break;
+		case PRODUCTION_DATA_TOTAL:
 			qb.setTables(DBHelper.PRODUCTION_DATA_TABLE_NAME);
 			projection = new String[] { RWELiveDataContentProvider.Columns.ProductionData.CREATED, "SUM(" + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = RWELiveDataContentProvider.Columns.ProductionData.CREATED;

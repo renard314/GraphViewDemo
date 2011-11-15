@@ -15,6 +15,7 @@
 	    android:layout_height="wrap_content" 
 	    android:id="@+id/textViewLabel" 
 	    android:gravity="center"
+	    android:visibility="invisible"
 	    android:layout_alignParentTop="true"/>
 	  <TextView
 	    android:id="@+id/textViewCountdown" 
@@ -22,8 +23,17 @@
 	    android:text="02:30s"
 	    android:layout_width="match_parent" 
 	    android:layout_height="wrap_content" 
+	    android:visibility="invisible"
 	    android:gravity="center"
 	    android:layout_below="@+id/textViewLabel"/>
+	  <ToggleButton 
+	  	android:id="@+id/toggleUpdateButton" 
+	  	android:layout_width="wrap_content" 
+	  	android:text="ToggleButton" 
+	  	android:layout_height="wrap_content" 
+	  	android:layout_alignParentTop="true" 
+	  	android:layout_alignParentRight="true">
+	  	</ToggleButton>
 	</RelativeLayout>
 	 <RelativeLayout
 	  android:id="@+id/progress"

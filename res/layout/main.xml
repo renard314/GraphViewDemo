@@ -7,26 +7,45 @@
     	class="de.inovex.graph.demo.MapFragment"
         android:layout_width="300dp"
         android:layout_height="match_parent"
-        android:layout_above="@+id/gauge_solar"
+        android:layout_above="@+id/gauge_container"
         android:layout_below="@+id/update_fragment"
         android:id="@+id/map_fragment">
         <!-- Preview: layout=@layout/map_fragment -->
     </fragment>
-    <de.inovex.mindtherobot.Thermometer
-        android:id="@+id/gauge_solar"
+    <ViewFlipper 
+    	android:id="@+id/gauge_container"
         android:layout_width="300dp"
         android:layout_height="300dp"
+        android:inAnimation="@android:anim/fade_in"
+        android:outAnimation="@android:anim/fade_out"
 		android:layout_alignParentBottom="true"
-		android:layout_alignParentLeft="true"
+		android:layout_alignParentLeft="true">    
+    	<de.inovex.mindtherobot.Thermometer
+	        android:id="@+id/gauge_wind"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent"
         >
         </de.inovex.mindtherobot.Thermometer>
-    
+    	<de.inovex.mindtherobot.Thermometer
+	        android:id="@+id/gauge_water"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent"
+        >
+        </de.inovex.mindtherobot.Thermometer>
+    	<de.inovex.mindtherobot.Thermometer
+	        android:id="@+id/gauge_bio"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent"
+        >
+        </de.inovex.mindtherobot.Thermometer>
+    </ViewFlipper>
     <fragment
     	class="de.inovex.graph.demo.GraphFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_toRightOf="@+id/map_fragment"
         android:layout_alignParentRight="true"
+        android:layout_marginLeft="15dp"
         android:layout_below="@+id/update_fragment"
         android:id="@+id/graph_fragment">
         <!-- Preview: layout=@layout/graph_fragment -->

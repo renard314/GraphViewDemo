@@ -25,6 +25,7 @@ import android.util.Log;
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
 
 public class DownloadService extends IntentService {
+	private static final String DEBUG_TAG = DownloadService.class.getName();
 	
 	public static final String STATUS_EXTRA = "status";
 	public static final String VALUE_EXTRA = "value";
@@ -83,17 +84,17 @@ public class DownloadService extends IntentService {
 
 		@Override
 		public void endDocument() throws SAXException {
-			if (mProductionList.size() > 0) {
-				sendUpdateBroadCast(STATUS_FINISHED,mProductionList.size());
-				sendUpdateBroadCast(mProductionList);
-				int numInserted = getContentResolver().bulkInsert(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION, mProductionList.toArray(new ContentValues[mProductionList.size()]));
-				getContentResolver().notifyChange(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL_MINUTE, null);
-				Log.i("DownloadService", "Inserted " + numInserted + " production values!");
-			}
 			if (mLocationList.size()>0) {
 				int numInserted = getContentResolver().bulkInsert(RWELiveDataContentProvider.CONTENT_URI_PLACES, mLocationList.toArray(new ContentValues[mLocationList.size()]));
 				getContentResolver().notifyChange(RWELiveDataContentProvider.CONTENT_URI_PLACES, null);
-				Log.i("DownloadService", "Inserted " + numInserted + " places!");				
+				Log.i(DEBUG_TAG, "Inserted " + numInserted + " places!");				
+			}
+			if (mProductionList.size() > 0) {
+				int numInserted = getContentResolver().bulkInsert(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION, mProductionList.toArray(new ContentValues[mProductionList.size()]));
+				getContentResolver().notifyChange(RWELiveDataContentProvider.CONTENT_URI_PRODUCTION_TOTAL, null);
+				sendUpdateBroadCast(STATUS_FINISHED,mProductionList.size());
+				sendUpdateBroadCast(mProductionList);
+				Log.i(DEBUG_TAG, "Inserted " + numInserted + " production values!");
 			}
 		}
 
@@ -107,11 +108,12 @@ public class DownloadService extends IntentService {
 						sendUpdateBroadCast(STATUS_IN_PROGRESS,mProductionList.size());
 						/*wait so that ui can show the progress effect*/
 						try {
-							Thread.sleep(150);
+							Thread.sleep(20);
 						} catch (InterruptedException e) {
 						}
 						//getContentResolver().insert(RWELiveDataContentProvider.CONTENT_URI_PLACES,mLocation);
 						mLocationList.add(mLocation);
+						Log.i("NEW LOCATION",mLocation.toString());
 						//Log.i("DownloadService",mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.XPOS) + " | " + mLocation.getAsString(RWELiveDataContentProvider.Columns.Locations.YPOS));						
 					}
 				}
@@ -135,7 +137,10 @@ public class DownloadService extends IntentService {
 
 		@Override
 		public void startDocument() throws SAXException {
+			Log.i(DEBUG_TAG, "Starting to parse new production data");				
 			mCurrentMillis = System.currentTimeMillis();
+			mLocationList.clear();
+			mProductionList.clear();
 		}
 
 		@Override

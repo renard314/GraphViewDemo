@@ -4,5 +4,7 @@
     <string name="app_name">InteractiveGraphView</string>
     <string name="update_counter_text">Nächstes Update in:</string>
     <string name="update_places_text">%1$d Standorte aktualisiert</string>
-    <string name="workload_title">Auslastung in Prozent</string>
+    <string name="workload_water_title">Auslastung Wasser</string>
+    <string name="workload_bio_title">Auslastung Biomasse</string>
+    <string name="workload_wind_title">Auslastung Windkraft</string>
 </resources>

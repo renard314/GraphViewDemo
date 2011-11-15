@@ -2,6 +2,7 @@ package de.inovex.graph.demo;
 
 import java.util.Calendar;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.Fragment;
 import android.app.PendingIntent;
@@ -9,6 +10,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
@@ -23,18 +27,23 @@ import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 import de.inovex.graph.demo.anim.Rotate3dAnimation;
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
 import de.inovex.graph.demo.service.DownloadService;
 
-public class UpdateFragment extends Fragment {
+public class UpdateFragment extends Fragment implements OnSharedPreferenceChangeListener {
 
+	private static final String PREF_KEY = "IS_UPDATING";
+	private static final String DEBUG_TAG = UpdateFragment.class.getSimpleName();
 	private ViewGroup mProgressView;
 	private ViewGroup mContainer;
 	private ViewGroup mCountdownView;
 	private ProgressBar mProgressBar;
 	private TextView mTextViewProgress;
 	private TextView mTextViewCountdown;
+	private TextView mTextViewLabel;
+	private ToggleButton mToggleButton;
 	private boolean mIsShowing = false;
 	private Runnable mTicker;
 	private Handler mHandler;
@@ -43,15 +52,29 @@ public class UpdateFragment extends Fragment {
 	private String mProgressMessage;
 	private static final int TIME_TO_UPDATE = 20; //Time between updates in seconds
 	private int mUpdateCounter = TIME_TO_UPDATE;
-	private final static int REQUEST_CODE = (int) (Math.random() * 10000);
+	private final static int REQUEST_CODE = 0;
 	private final UpdateReceiver mUpdateReceiver = new UpdateReceiver();
+	private SharedPreferences mPrefs;
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		mCalendar = Calendar.getInstance();
 		mProgressMessage = getResources().getString(R.string.update_places_text);
 		mHandler = new Handler();
-		scheduleUpdate();
+	}
+	
+	@Override
+	public void onAttach(Activity activity) {
+		super.onAttach(activity);
+		mPrefs = activity.getSharedPreferences(UpdateFragment.class.getSimpleName(), 0 );
+		mPrefs.registerOnSharedPreferenceChangeListener(this);
+	}
+	
+	@Override
+	public void onDetach() {
+		super.onDetach();
+		mPrefs.unregisterOnSharedPreferenceChangeListener(this);
 	}
 
 	public void onUpdateStart() {
@@ -72,11 +95,9 @@ public class UpdateFragment extends Fragment {
 	public void onUpdateFinished(int totalCount) {
 		applyRotation(-1, 0, 90);
 		mUpdateCounter = TIME_TO_UPDATE;
-		Log.i("SCHEDULED ALARM", "time to update = " + mCalendar.getTime());
 		mIsShowing = true;
 		mProgressBar.setMax(totalCount);
 		startTicker();
-		scheduleUpdate();
 	}
 	
 	public void onUpdateProgress(int value) {
@@ -86,18 +107,26 @@ public class UpdateFragment extends Fragment {
 		mTextViewProgress.invalidate();
 	}
 
+	private void cancelUpdate(){
+		Intent intent = new Intent(getActivity(), AlarmReceiver.class);
+		PendingIntent sender = PendingIntent.getBroadcast(this.getActivity(), REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+		// Get the AlarmManager service
+		AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
+		am.cancel(sender);
+		Log.i(DEBUG_TAG, "canceled alarm");
+	}
 	
 	private void scheduleUpdate(){
-		mCalendar.setTimeInMillis(System.currentTimeMillis());
-		mCalendar.add(Calendar.SECOND, TIME_TO_UPDATE);
 		
 		Intent intent = new Intent(getActivity(), AlarmReceiver.class);
 		PendingIntent sender = PendingIntent.getBroadcast(this.getActivity(), REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
 		// Get the AlarmManager service
 		AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
-		am.set(AlarmManager.RTC_WAKEUP, mCalendar.getTimeInMillis(), sender);
-		
+		am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 1000*30, sender);
+		Log.i(DEBUG_TAG, "scheduled alarm: interval in seconds = " + TIME_TO_UPDATE);
+
 	}
 
 	/**
@@ -122,8 +151,7 @@ public class UpdateFragment extends Fragment {
 					onUpdateProgress(val);
 					break;				
 				}
-		}
-		
+		}	
 	}
 
 	@Override
@@ -135,6 +163,22 @@ public class UpdateFragment extends Fragment {
 		mProgressBar = (ProgressBar) mContainer.findViewById(R.id.progressBarUpdate);
 		mTextViewCountdown = (TextView) mContainer.findViewById(R.id.textViewCountdown);
 		mTextViewProgress = (TextView) mContainer.findViewById(R.id.textViewProgress);
+		mToggleButton = (ToggleButton) mContainer.findViewById(R.id.toggleUpdateButton);
+		mTextViewLabel = (TextView) mContainer.findViewById(R.id.textViewLabel);
+		mToggleButton.setChecked(mPrefs.getBoolean(PREF_KEY, false));
+
+		mToggleButton.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				boolean val = mToggleButton.isChecked();
+				Editor edit = mPrefs.edit();
+				edit.putBoolean(PREF_KEY, val);
+				edit.apply();				
+			}
+		});
+		
+		
 
 		int total = getLocationCount();
 		if (total==0){
@@ -160,7 +204,9 @@ public class UpdateFragment extends Fragment {
 		super.onResume();
 		getActivity().registerReceiver(mUpdateReceiver, new IntentFilter(DownloadService.UPDATE_ACTION));
 		mIsShowing = true;
-		startTicker();
+		if (mPrefs.getBoolean(PREF_KEY, false)){
+			startTicker();
+		}
 	}
 	
 	
@@ -270,6 +316,8 @@ public class UpdateFragment extends Fragment {
 			} else {
 				mProgressView.setVisibility(View.GONE);
 				mCountdownView.setVisibility(View.VISIBLE);
+				mTextViewLabel.setVisibility(View.VISIBLE);
+				mTextViewCountdown.setVisibility(View.VISIBLE);
 				rotation = new Rotate3dAnimation(270, 0, centerX, centerY, 310.0f, false);
 			}
 
@@ -278,6 +326,22 @@ public class UpdateFragment extends Fragment {
 			rotation.setInterpolator(new DecelerateInterpolator());
 
 			mContainer.startAnimation(rotation);
+		}
+	}
+
+	@Override
+	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+		if (key.equals(PREF_KEY)){
+			boolean val = sharedPreferences.getBoolean(PREF_KEY, false);
+			if (val){
+				scheduleUpdate();
+			} else {
+				cancelUpdate();
+				mTextViewLabel.setVisibility(View.INVISIBLE);
+				mTextViewCountdown.setVisibility(View.INVISIBLE);
+				mIsShowing = false;
+
+			}
 		}
 	}
 

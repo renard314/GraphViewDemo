@@ -72,6 +72,8 @@ public final class Thermometer extends View {
 	private float handAcceleration = 0.0f;
 	private long lastHandMoveTime = -1L;
 	private String title = "RWE";
+
+	private int interval = 5;
 	
 	
 	public Thermometer(Context context) {
@@ -87,6 +89,14 @@ public final class Thermometer extends View {
 	public Thermometer(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
 		initDrawingTools();
+	}
+	
+	public void setRimColor(int color){
+		rimCirclePaint.setColor(color);
+	}
+	
+	public void setScaleInterval(int interval){
+		this.interval = interval;
 	}
 	
 	public void setTotalNicks(int nicks){
@@ -155,7 +165,8 @@ public final class Thermometer extends View {
 		rimCirclePaint = new Paint();
 		rimCirclePaint.setAntiAlias(true);
 		rimCirclePaint.setStyle(Paint.Style.STROKE);
-		rimCirclePaint.setColor(Color.argb(0x4f, 0x33, 0x36, 0x33));
+		//rimCirclePaint.setColor(Color.argb(0x4f, 0x33, 0x36, 0x33));
+		rimCirclePaint.setColor(Color.argb(0xff, 0xff, 0xff, 0xff));
 		rimCirclePaint.setStrokeWidth(0.005f);
 
 		float rimSize = 0.02f;
@@ -186,7 +197,8 @@ public final class Thermometer extends View {
 
 		scalePaint = new Paint();
 		scalePaint.setStyle(Paint.Style.STROKE);
-		scalePaint.setColor(0x9f004d0f);
+		//scalePaint.setColor(0x9f004d0f);
+		scalePaint.setColor(Color.WHITE);
 		scalePaint.setStrokeWidth(0.005f);
 		scalePaint.setAntiAlias(true);
 		
@@ -201,7 +213,8 @@ public final class Thermometer extends View {
 					  faceRect.right - scalePosition, faceRect.bottom - scalePosition);
 
 		titlePaint = new Paint();
-		titlePaint.setColor(0xaf946109);
+		titlePaint.setColor(0xffdfdfdf);
+		//titlePaint.setColor(0xaf946109);
 		titlePaint.setAntiAlias(true);
 		titlePaint.setTypeface(Typeface.DEFAULT_BOLD);
 		titlePaint.setTextAlign(Paint.Align.CENTER);
@@ -220,7 +233,8 @@ public final class Thermometer extends View {
 
 		handPaint = new Paint();
 		handPaint.setAntiAlias(true);
-		handPaint.setColor(0xff392f2c);		
+		//handPaint.setColor(0xff392f2c);		
+		handPaint.setColor(0xffc7d4c2);		
 		handPaint.setShadowLayer(0.01f, -0.005f, -0.005f, 0x7f000000);
 		handPaint.setStyle(Paint.Style.FILL);	
 		
@@ -273,13 +287,13 @@ public final class Thermometer extends View {
 
 	private void drawRim(Canvas canvas) {
 		// first, draw the metallic body
-		canvas.drawOval(rimRect, rimPaint);
+		//canvas.drawOval(rimRect, rimPaint);
 		// now the outer rim circle
 		canvas.drawOval(rimRect, rimCirclePaint);
 	}
 	
 	private void drawFace(Canvas canvas) {		
-		canvas.drawOval(faceRect, facePaint);
+		//canvas.drawOval(faceRect, facePaint);
 		// draw the inner rim circle
 		canvas.drawOval(faceRect, rimCirclePaint);
 		// draw the rim shadow inside the face
@@ -296,7 +310,7 @@ public final class Thermometer extends View {
 			
 			canvas.drawLine(0.5f, y1, 0.5f, y2, scalePaint);
 			
-			if (i % 5 == 0) {
+			if (i % interval == 0) {
 				int value = nickToDegree(i);
 				
 				if (value >= minValue && value <= maxValue) {
@@ -411,6 +425,7 @@ public final class Thermometer extends View {
 		return Math.abs(handPosition - handTarget) > 0.01f;
 	}
 	
+	
 	private void moveHand() {
 		if (! handNeedsToMove()) {
 			return;
@@ -418,9 +433,9 @@ public final class Thermometer extends View {
 		
 		if (lastHandMoveTime != -1L) {
 			long currentTime = System.currentTimeMillis();
-			float delta = (currentTime - lastHandMoveTime) / 1000.0f;
+			float delta = (currentTime - lastHandMoveTime) / 500.0f;
 
-			float direction = Math.signum(handVelocity);
+			//float direction = Math.signum(handVelocity);
 			if (Math.abs(handVelocity) < 90.0f) {
 				handAcceleration = 5.0f * (handTarget - handPosition);
 			} else {
@@ -428,7 +443,7 @@ public final class Thermometer extends View {
 			}
 			handPosition += handVelocity * delta;
 			handVelocity += handAcceleration * delta;
-			if ((handTarget - handPosition) * direction < 0.01f * direction) {
+			if ((handTarget - handPosition)  < 0.01f ) {
 				handPosition = handTarget;
 				handVelocity = 0.0f;
 				handAcceleration = 0.0f;
@@ -459,9 +474,9 @@ public final class Thermometer extends View {
 		}
 		handTarget = value;
 		handInitialized = true;
-		handVelocity = 0.0f;
-		handAcceleration = 0.0f;
-		lastHandMoveTime = -1L;
+//		handVelocity = 0.0f;
+//		handAcceleration = 0.0f;
+//		lastHandMoveTime = -1L;
 
 		invalidate();
 	}
