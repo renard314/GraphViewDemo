@@ -7,4 +7,10 @@
     <string name="workload_water_title">Auslastung Wasser</string>
     <string name="workload_bio_title">Auslastung Biomasse</string>
     <string name="workload_wind_title">Auslastung Windkraft</string>
+    <string name="label_name">Name</string>
+    <string name="label_golive">Inbetr.</string>
+    <string name="label_city">Stadt</string>
+    <string name="label_turbines">Turbinen</string>
+    <string name="label_type">Typ</string>
+    <string name="label_power">Leistung</string>
 </resources>

@@ -30,20 +30,20 @@ public class MapFragment extends Fragment{
 	
 	public void loadMap(){
 		Log.i(DEBUG_TAG, "loading data into map");
-		for (Location l : DataCache.mLocations.values()){
+		for (Location l : DataFragment.mLocations.values()){
 			mMapView.addLocation(l);
 		}
 		mMapView.invalidate();
 	}
 
 	public void updateMap(final double valueX) {
-		for (String locId : DataCache.mProductionSeries.keySet()) {
-			GraphViewSeries series = DataCache.mProductionSeries.get(locId);
+		for (String locId : DataFragment.mProductionSeries.keySet()) {
+			GraphViewSeries series = DataFragment.mProductionSeries.get(locId);
 			if (series.getValues().size() > 0) {
 				double p = series.getNearestValue(valueX).valueY;
-				Location loc = DataCache.mLocations.get(locId);
+				Location loc = DataFragment.mLocations.get(locId);
 				if (loc != null) {
-					mMapView.addLocation((int) p, loc.power, loc.x, loc.y, loc.powerType);
+					mMapView.addLocation((int) p, loc.power, loc.x, loc.y, loc.powerType, loc.values);
 				} else {
 					// this happens if the location had no valid x and y value
 				}

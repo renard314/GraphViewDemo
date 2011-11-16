@@ -50,7 +50,7 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 	private Calendar mCalendar;
 	private final static String mFormat = "mm:ss";
 	private String mProgressMessage;
-	private static final int TIME_TO_UPDATE = 20; //Time between updates in seconds
+	public static final int TIME_TO_UPDATE = 60*2; //Time between updates in seconds
 	private int mUpdateCounter = TIME_TO_UPDATE;
 	private final static int REQUEST_CODE = 0;
 	private final UpdateReceiver mUpdateReceiver = new UpdateReceiver();
@@ -124,7 +124,7 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 
 		// Get the AlarmManager service
 		AlarmManager am = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
-		am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 1000*30, sender);
+		am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(), 1000*TIME_TO_UPDATE, sender);
 		Log.i(DEBUG_TAG, "scheduled alarm: interval in seconds = " + TIME_TO_UPDATE);
 
 	}
@@ -179,6 +179,9 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 		});
 		
 		
+		if (savedInstanceState !=null){
+			mUpdateCounter = savedInstanceState.getInt("countdown");
+		}
 
 		int total = getLocationCount();
 		if (total==0){
@@ -205,6 +208,8 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 		getActivity().registerReceiver(mUpdateReceiver, new IntentFilter(DownloadService.UPDATE_ACTION));
 		mIsShowing = true;
 		if (mPrefs.getBoolean(PREF_KEY, false)){
+			mTextViewLabel.setVisibility(View.VISIBLE);
+			mTextViewCountdown.setVisibility(View.VISIBLE);
 			startTicker();
 		}
 	}

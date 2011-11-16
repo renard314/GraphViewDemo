@@ -31,10 +31,14 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 	public static enum POWER_TYPE{
 		BIOMASS("Biomassekraftwerk"), ONSHORE_WIND("Onshore Windpark"),WATER("Wasserkraftwerk"),CHP_COAL("CHP Kohlekraftwerk"),UNKNOWN("");
-		private String id;
+		private final String id;
 		private POWER_TYPE(String id){
 			this.id = id;
 			
+		}
+		
+		public String getName(){
+			return id;
 		}
 		
 		public static final POWER_TYPE fromString(String name){

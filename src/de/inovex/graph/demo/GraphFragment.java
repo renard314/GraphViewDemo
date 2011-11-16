@@ -28,7 +28,7 @@ public class GraphFragment extends Fragment {
 		mGraphView.setScrollable(true);
 		mGraphView.setScalable(true);
 		mGraphView.setSmoothing(false);
-		mGraphView.setManualYAxisBounds(110000, 37000);
+		mGraphView.setManualYAxisBounds(110000, 0);
 		mGraphView.setViewPortSize(VIEWPORT_SIZE);
 		mGraphView.setShowLegend(true);
 		mGraphView.setLegendAlign(GraphView.LegendAlign.BOTTOM);

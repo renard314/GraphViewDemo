@@ -5,10 +5,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider.POWER_TYPE;
-
 import android.animation.ValueAnimator;
 import android.animation.ValueAnimator.AnimatorUpdateListener;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -17,12 +16,18 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
+import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider.POWER_TYPE;
 
 public class MapView extends View {
 	private final static String sBorderPoints = "M 735.50,258.00M 739.00,273.50M 739.00,278.50M 735.00,313.50M 759.50,387.50M 730.00,390.50M 724.50,403.00M 678.50,426.00M 685.00,456.50M 724.00,490.00M 706.00,513.50M 709.50,531.00M 700.00,542.00M 681.00,537.00M 660.50,549.00M 632.00,553.50M 609.50,551.00M 591.50,548.50M 574.50,535.00M 558.00,535.00M 543.50,544.50M 568.50,474.50M 518.50,465.00M 515.00,440.50M 504.50,426.50M 504.00,404.00M 495.50,398.50M 504.00,368.50M 499.50,358.00M 527.00,336.00M 530.00,317.50M 518.50,300.00M 532.00,279.00M 537.50,268.50M 554.00,268.50M 559.50,271.50M 575.50,264.00M 582.00,250.50M 582.00,237.50M 575.50,217.00M 608.00,215.50M 618.00,233.50M 637.50,240.00M 652.50,243.00M 667.50,245.00M 680.50,230.50M 710.50,223.50M 715.00,239.50";
+	@SuppressWarnings(value = { "unused" })
+	private final static String DEBUG_TAG = MapView.class.getName();
 
 	public static class Location extends Point implements Comparable<Location> {
 
@@ -31,16 +36,42 @@ public class MapView extends View {
 			public int compare(Location object1, Location object2) {
 				return object1.power - object2.power;
 			}
+		}
 
+		public static class DistanceComparator implements Comparator<Location> {
+			private float mX;
+			private float mY;
+
+			public DistanceComparator(final float x, final float y) {
+				mX = x;
+				mY = y;
+			}
+
+			private double calcDistance(Location l) {
+				final double dx = l.x - mX;
+				final double dy = l.y - mY;
+				return Math.sqrt(dx * dx + dy * dy);
+			}
+
+			@Override
+			public int compare(Location object1, Location object2) {
+				return Double.compare(calcDistance(object1), calcDistance(object2));
+			}
 		}
 
 		private static PowerComparator mPowerComparator = new PowerComparator();
 		int production;
 		int power;
 		POWER_TYPE powerType;
+		ContentValues values;
 
 		public static Comparator<Location> getPowerComparator() {
 			return mPowerComparator;
+		}
+
+		public Location(int production, int power, int x, int y, POWER_TYPE type, ContentValues values) {
+			this(production, power, x, y, type);
+			this.values = values;
 		}
 
 		public Location(int production, int power, int x, int y, POWER_TYPE type) {
@@ -58,7 +89,10 @@ public class MapView extends View {
 		@Override
 		public String toString() {
 			StringBuilder sb = new StringBuilder();
-			sb.append("type = " + this.powerType.name() + ", x = " + this.x + ", y = " + this.y + ", power = " + this.power + ", production = " + this.production);
+			if (values == null) {
+				values = new ContentValues();
+			}
+			sb.append("type = " + this.powerType.name() + ", x = " + this.x + ", y = " + this.y + ", power = " + this.power + ", production = " + this.production + ", Values = " + values.toString());
 			return sb.toString();
 		}
 	}
@@ -74,9 +108,15 @@ public class MapView extends View {
 	private int minYBorder = Integer.MAX_VALUE;
 	private int maxYBorder = Integer.MIN_VALUE;
 	private boolean mLocationAdded = false;
-	private Paint mCirclePaint;
-	private Paint mBorderPaint;
-	private Paint mCircleBorderPaint;
+	private Paint mCirclePaint; // inner circle
+	private Paint mInfoTextPaint; // inner circle
+	private Paint mBorderPaint; // map border
+	private Paint mCircleBorderPaint; // border of circle
+	private Paint mInfoWindowPaint; // border of info window
+	private Paint mInfoWindowFillPaint; // fill of info window
+
+	private Paint mTouchedCircleBorderPaint; // border of current touched circle
+	private Location mTouchedLocation = null;
 
 	// private Paint mTextPaint;
 	private final List<Point> mBorderPoints = new ArrayList<Point>();
@@ -100,8 +140,6 @@ public class MapView extends View {
 				setStyle(Paint.Style.FILL);
 				setAntiAlias(true);
 				setColor(Color.WHITE);
-				// setMaskFilter(new BlurMaskFilter(5, Blur.NORMAL)); //not
-				// supported for hardware accelerated views
 			}
 		};
 		mCircleBorderPaint = new Paint() {
@@ -112,6 +150,15 @@ public class MapView extends View {
 				setColor(Color.WHITE);
 			}
 		};
+		mTouchedCircleBorderPaint = new Paint() {
+			{
+				setStyle(Paint.Style.STROKE);
+				setAntiAlias(true);
+				setStrokeWidth(2);
+				setColor(Color.WHITE);
+			}
+		};
+
 		mBorderPaint = new Paint() {
 			{
 				setStyle(Paint.Style.STROKE);
@@ -122,16 +169,34 @@ public class MapView extends View {
 			}
 		};
 
-		// final Typeface tf = Typeface.create(Typeface.SANS_SERIF,
-		// Typeface.BOLD);
-		// mTextPaint = new Paint(){{
-		// setColor(0xFFFF8A00);
-		// setTextAlign(Paint.Align.CENTER);
-		// setTypeface(tf);
-		// setTextSize(20);
-		// setAntiAlias(true);
-		// }
-		// };
+		mInfoWindowPaint = new Paint() {
+			{
+				setStyle(Paint.Style.STROKE);
+				setAntiAlias(true);
+				setStrokeWidth(1.5f);
+				setColor(Color.WHITE);
+			}
+		};
+
+		mInfoWindowFillPaint = new Paint() {
+			{
+				setStyle(Paint.Style.FILL);
+				setAntiAlias(true);
+				setColor(0xaaffffff);				
+			}
+		};
+
+		//final Typeface tf = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL);
+		mInfoTextPaint = new Paint(){
+			{
+				setColor(Color.BLACK);
+				setAntiAlias(true);
+				setTypeface(Typeface.SANS_SERIF);
+				setTypeface(Typeface.DEFAULT_BOLD);
+				setTextAlign(Paint.Align.LEFT);
+				setTextSize(15);
+			}
+		};
 
 		parseBorderPoints();
 		ValueAnimator anim = ValueAnimator.ofInt(0, 359);
@@ -176,10 +241,10 @@ public class MapView extends View {
 	public void addLocation(Location p) {
 		float[] mappedPoints = new float[2];
 		mappedPoints[0] = p.x;
-		mappedPoints[1] = p.y;		
+		mappedPoints[1] = p.y;
 		mViewPortMatrix.mapPoints(mappedPoints);
 
-		if (mBorderClip.contains(mappedPoints[0],mappedPoints[1])) {
+		if (mBorderClip.contains(mappedPoints[0], mappedPoints[1])) {
 			if (!mLocations.contains(p)) {
 				mLocations.add(p);
 				maxX = Math.max(p.x, maxX);
@@ -195,8 +260,8 @@ public class MapView extends View {
 		}
 	}
 
-	public void addLocation(int production, int maxProduction, int x, int y, POWER_TYPE type) {
-		addLocation(new Location(production, maxProduction, x, y, type));
+	public void addLocation(int production, int maxProduction, int x, int y, POWER_TYPE type, ContentValues values) {
+		addLocation(new Location(production, maxProduction, x, y, type, values));
 	}
 
 	@Override
@@ -234,6 +299,36 @@ public class MapView extends View {
 		offsets[0] = (int) (-totalMinX + (rightSpace / 2));
 		offsets[1] = (int) (-totalMinY + (bottomSpace / 2));
 
+	}
+
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		final int action = event.getAction();
+		final float[] mappedPoints = new float[2];
+		final Matrix inverse = new Matrix();
+		mViewPortMatrix.invert(inverse);
+
+		switch (action) {
+		case MotionEvent.ACTION_DOWN:
+		case MotionEvent.ACTION_MOVE:
+
+			mappedPoints[0] = event.getX();
+			mappedPoints[1] = event.getY();
+			inverse.mapPoints(mappedPoints);
+			Location l = Collections.min(mLocations, new Location.DistanceComparator(mappedPoints[0], mappedPoints[1]));
+			final double dx = (l.x - mappedPoints[0]);
+			final double dy = (l.y - mappedPoints[1]);
+
+			final double dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist < 15) {
+				mTouchedLocation = l;
+			} else {
+				mTouchedLocation = null;
+			}
+			postInvalidate();
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -299,13 +394,62 @@ public class MapView extends View {
 		mBorderPath.computeBounds(mBorderClip, true);
 	}
 
+	private void drawInfoField(final float originX, final float originY, final float radius, final Canvas canvas,final Location l) {
+		final float paddingTop = 5;
+		final float paddingBottom = 5;
+		final float paddingLeft = 10;
+		final float paddingRight = 3;
+		if (l.values != null && l.values.size() > 0) {
+			Rect bounds = new Rect();
+			int maxKeyLength = 0;
+			int maxValueLength = 0;
+			int maxTextHeight = 0;
+			int lineCount = 0;
+			for (String key : l.values.keySet()) {
+				String value = l.values.getAsString(key);
+				if (value != null) {
+					mInfoTextPaint.getTextBounds(key, 0, key.length(), bounds);
+					maxKeyLength = Math.max(bounds.width(), maxKeyLength);
+					maxTextHeight = Math.max(bounds.height(), maxTextHeight);
+
+					mInfoTextPaint.getTextBounds(value, 0, value.length(), bounds);
+					maxValueLength = Math.max(bounds.width(), maxValueLength);
+					maxTextHeight = Math.max(bounds.height(), maxTextHeight);
+					lineCount++;
+				}
+			}
+			final float extraSpace = mInfoTextPaint.measureText(" : ");
+			final float height = maxTextHeight*lineCount + paddingBottom+paddingTop;
+			final float width = maxKeyLength + maxValueLength + extraSpace + paddingLeft + paddingRight;
+			final float viewHeight = getHeight()-2;
+			final RectF infoRect = new RectF(2, viewHeight-height, width, viewHeight );
+			
+			canvas.drawLine(originX-radius, originY, infoRect.left, infoRect.top+6, mInfoWindowPaint);
+			canvas.drawLine(originX+radius, originY, infoRect.right, infoRect.top+6, mInfoWindowPaint);
+			canvas.drawRoundRect(infoRect,6,6, mInfoWindowFillPaint);
+			canvas.drawRoundRect(infoRect,6,6, mInfoWindowPaint);
+			
+			float currentLine = viewHeight-height+maxTextHeight + (paddingTop);
+			for (String key : l.values.keySet()){
+				String value = l.values.getAsString(key);
+				if (value!=null){
+					canvas.drawText(key, paddingLeft,currentLine,  mInfoTextPaint);
+					canvas.drawText(value, maxKeyLength + extraSpace + paddingLeft, currentLine,  mInfoTextPaint);
+					currentLine+=maxTextHeight;
+				}
+			}
+
+		}
+
+	}
+
 	@Override
 	protected void onDraw(Canvas canvas) {
 		if (mLocationAdded) {
 			Collections.sort(mLocations);
 			mLocationAdded = false;
 		}
-		float[] mappedPoints = new float[2];
+		final float[] mappedPoints = new float[2];
 
 		canvas.rotate(mRotation, getWidth() / 2, getHeight() / 2);
 		canvas.drawPath(mBorderPath, mBorderPaint);
@@ -314,36 +458,34 @@ public class MapView extends View {
 			final int maxPower = Collections.max(mLocations, Location.getPowerComparator()).power;
 			final int minPower = Collections.min(mLocations, Location.getPowerComparator()).power;
 			final float linearScale = (20f / (maxPower - minPower));
-			double logRadiusScale = Math.log(20);
+			final double logRadiusScale = Math.log(20);
 
 			for (Location p : mLocations) {
 				if (p.power > 0) {
 					mappedPoints[0] = p.x;
 					mappedPoints[1] = p.y;
 					mViewPortMatrix.mapPoints(mappedPoints);
-					// float r = (float) (15*Math.log(p.power) /
-					// logRadiusScale);
 					double r = p.power * linearScale;
-					// int c = (int) Math.round(200*Math.log(p.production) /
-					// logColorScale) +55;
 					r = (20 * Math.log(r + 1) / logRadiusScale) + 3;
-					int productionRatio = 100 * p.production / p.power;
-					int color = MainActivity.getColorForType(p.powerType);
+					final int productionRatio = 100 * p.production / p.power;
+					final int color = MainActivity.getColorForType(p.powerType);
 
 					if (productionRatio == 0) {
 						mCirclePaint.setARGB(255, 200, 40, 60);
 					} else {
-						int grey = Math.round(255 * (1f * p.production / p.power));
+						final int grey = Math.round(255 * (1f * p.production / p.power));
 						mCirclePaint.setARGB(grey, Color.red(color), Color.green(color), Color.blue(color));
 					}
 					mCircleBorderPaint.setColor(color);
 					canvas.drawCircle(mappedPoints[0], mappedPoints[1], (float) r, mCirclePaint);
 					canvas.drawCircle(mappedPoints[0], mappedPoints[1], (float) r, mCircleBorderPaint);
-					// if (productionRatio>0){
-					// canvas.drawText(productionRatio + "%", (float)
-					// (mappedPoints[0]+r), (float)
-					// (mappedPoints[1]-r),mTextPaint);
-					// }
+
+					if (mTouchedLocation != null) {
+						if (p.equals(mTouchedLocation)) {
+							canvas.drawCircle(mappedPoints[0], mappedPoints[1], (float) (r + 1), mTouchedCircleBorderPaint);
+							drawInfoField(mappedPoints[0], mappedPoints[1],(float) (r + 1), canvas, mTouchedLocation);
+						}
+					}
 				}
 
 			}
