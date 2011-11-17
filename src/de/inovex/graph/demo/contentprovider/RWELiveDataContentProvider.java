@@ -1,5 +1,12 @@
 package de.inovex.graph.demo.contentprovider;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -8,10 +15,12 @@ import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -29,28 +38,29 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_BIO = Uri.parse("content://" + AUTHORITY + "/production_data/total/bio");
 	public static final Uri CONTENT_URI_PRODUCTION_TOTAL_WATER = Uri.parse("content://" + AUTHORITY + "/production_data/total/water");
 
-	public static enum POWER_TYPE{
-		BIOMASS("Biomassekraftwerk"), ONSHORE_WIND("Onshore Windpark"),WATER("Wasserkraftwerk"),CHP_COAL("CHP Kohlekraftwerk"),UNKNOWN("");
+	public static enum POWER_TYPE {
+		BIOMASS("Biomassekraftwerk"), ONSHORE_WIND("Onshore Windpark"), WATER("Wasserkraftwerk"), CHP_COAL("CHP Kohlekraftwerk"), UNKNOWN("");
 		private final String id;
-		private POWER_TYPE(String id){
+
+		private POWER_TYPE(String id) {
 			this.id = id;
-			
+
 		}
-		
-		public String getName(){
+
+		public String getName() {
 			return id;
 		}
-		
-		public static final POWER_TYPE fromString(String name){
-			for(POWER_TYPE type:POWER_TYPE.values()){
-				if (name.contains(type.id)){
+
+		public static final POWER_TYPE fromString(String name) {
+			for (POWER_TYPE type : POWER_TYPE.values()) {
+				if (name.contains(type.id)) {
 					return type;
 				}
 			}
 			return UNKNOWN;
 		}
 	}
-	
+
 	public static class Columns {
 		public static class Locations {
 			public static final String ID = "_id";
@@ -103,22 +113,12 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 94;
+		private static final int DATABASE_VERSION = 97;
 
-		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " 
-				+ Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, "
-				+ Columns.Locations.CREATED + " INTEGER, " 
-				+ Columns.Locations.NAME + " TEXT, "
-				+ Columns.Locations.TYPE + " TEXT, "
-				+ Columns.Locations.CITY + " TEXT, " 
-				+ Columns.Locations.COUNTRY + " TEXT, "
-				+ Columns.Locations.GOLIVE + " TEXT, " 
-				+ Columns.Locations.XPOS + " INTEGER, " 
-				+ Columns.Locations.YPOS + " INTEGER, " 
-				+ Columns.Locations.LAST_PRODUCTION + " INTEGER, " 
-				+ Columns.Locations.TURBINES + " INTEGER, "
-				+ Columns.Locations.POWER + " TEXT );";
+		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " + Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, " + Columns.Locations.CREATED + " INTEGER, " + Columns.Locations.NAME + " TEXT, " + Columns.Locations.TYPE
+				+ " TEXT, " + Columns.Locations.CITY + " TEXT, " + Columns.Locations.COUNTRY + " TEXT, " + Columns.Locations.GOLIVE + " TEXT, " + Columns.Locations.XPOS + " INTEGER, "
+				+ Columns.Locations.YPOS + " INTEGER, " + Columns.Locations.LAST_PRODUCTION + " INTEGER, " + Columns.Locations.TURBINES + " INTEGER, " + Columns.Locations.POWER + " TEXT );";
 
 		private static final String PRODUCTION_DATA_TABLE_CREATE = "CREATE TABLE " + PRODUCTION_DATA_TABLE_NAME + " ( " + Columns.ProductionData.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
 				+ Columns.ProductionData.CREATED + " INTEGER, " + Columns.ProductionData.VALUE + " INTEGER, " + Columns.ProductionData.LOCATION_ID + " TEXT);";
@@ -127,6 +127,28 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		DBHelper(Context context) {
 			super(context, DATABASE_NAME, null, DATABASE_VERSION);
+			/*
+			try {
+				Log.i(RWELiveDataContentProvider.class.getName(),"Checking for backup at : " + Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
+				File backup = new File(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
+				if (backup.exists()){
+					Log.i(RWELiveDataContentProvider.class.getName(),"Backup found!");
+					boolean success = context.deleteDatabase(DATABASE_NAME);
+					if (success) {
+						Log.i(RWELiveDataContentProvider.class.getName(),"old database deleted!");
+						copyDataBase();
+					}
+					else {
+						Log.i(RWELiveDataContentProvider.class.getName(),"old database NOT deleted!");
+					}
+				}
+
+			} catch (SQLiteException e) {
+				e.printStackTrace();
+				Log.i(RWELiveDataContentProvider.class.getName(),"import error ");
+			}
+			*/
+
 		}
 
 		@Override
@@ -135,9 +157,45 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			db.execSQL(PRODUCTION_DATA_TABLE_CREATE);
 		}
 
+		/**
+		 * 92 * Copies your database from your local assets-folder to the just
+		 * created 93 * empty database in the system folder, from where it can
+		 * be accessed and 94 * handled. This is done by transfering bytestream.
+		 * 95 *
+		 */
+		private void copyDataBase() {
+			try {
+				// Open your local db as the input stream
+				File backup = new File(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
+				
+//				InputStream myInput = mContext.openFileInput(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
+				InputStream myInput = new FileInputStream(backup);
+				// Path to the just created empty db
+				String outFileName = "/data/data/de.inovex.graph.demo/databases/inovex_graph_demo";
+				// Open the empty db as the output stream
+				OutputStream myOutput = new FileOutputStream(outFileName);
+
+				// transfer bytes from the inputfile to the outputfile
+				byte[] buffer = new byte[1024];
+				int length;
+				while ((length = myInput.read(buffer)) > 0) {
+					myOutput.write(buffer, 0, length);
+				}
+				// Close the streams
+				myOutput.flush();
+				myOutput.close();
+				myInput.close();
+			} catch (IOException exc) {
+				Log.e(RWELiveDataContentProvider.class.getName(),"import error");
+				exc.printStackTrace();
+			}
+
+		}
+
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			Log.w(TAG, "Upgrading database from version " + oldVersion + " to " + newVersion + ", which will destroy all old data");
+
+			Log.w(TAG, "Upgrading database from version " + oldVersion +" to " + newVersion + ", which will destroy all old data");
 			db.execSQL("DROP TABLE IF EXISTS " + LOCATION_TABLE_NAME);
 			db.execSQL("DROP TABLE IF EXISTS " + PRODUCTION_DATA_TABLE_NAME);
 			onCreate(db);
@@ -165,32 +223,42 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		switch (type) {
 		case PRODUCTION_DATA_TOTAL_WATER:
-			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			// SELECT p.created,sum(p.value), l.type FROM production_data AS p
+			// LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id)
+			// WHERE l.type LIKE "%Bio%" GROUP BY p.created;
 			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
-			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
+					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
 			selection = "l.type LIKE \"%Wasser%\"";
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL_BIO:
-			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			// SELECT p.created,sum(p.value), l.type FROM production_data AS p
+			// LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id)
+			// WHERE l.type LIKE "%Bio%" GROUP BY p.created;
 			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
-			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED+ " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
+					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
 			selection = "l.type LIKE \"%Bio%\"";
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL_WIND:
-			//SELECT p.created,sum(p.value), l.type FROM production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id) WHERE  l.type LIKE "%Bio%" GROUP BY p.created;
+			// SELECT p.created,sum(p.value), l.type FROM production_data AS p
+			// LEFT OUTER JOIN locations AS l ON (p.location_id = l.location_id)
+			// WHERE l.type LIKE "%Bio%" GROUP BY p.created;
 			qb.setTables("production_data AS p LEFT OUTER JOIN locations AS l ON (p.location_id= l.location_id)");
-			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED+ " AS created", "SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
+					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
 			selection = "l.type LIKE \"%Wind%\"";
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL:
 			qb.setTables(DBHelper.PRODUCTION_DATA_TABLE_NAME);
-			projection = new String[] { RWELiveDataContentProvider.Columns.ProductionData.CREATED, "SUM(" + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
+			projection = new String[] { RWELiveDataContentProvider.Columns.ProductionData.CREATED,
+					"SUM(" + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = RWELiveDataContentProvider.Columns.ProductionData.CREATED;
 			break;
 		case PRODUCTION_DATA:
@@ -277,7 +345,7 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		long rowId = db.insert(tableName, null, values);
 		if (rowId > 0) {
 			Uri entryUri = ContentUris.withAppendedId(uri, rowId);
-			if (notifyUri!=null) {
+			if (notifyUri != null) {
 				getContext().getContentResolver().notifyChange(entryUri, null);
 				getContext().getContentResolver().notifyChange(notifyUri, null);
 			}

@@ -1,20 +1,30 @@
 package de.inovex.graph.demo;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.util.Calendar;
 
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.text.format.DateFormat;
@@ -27,6 +37,7 @@ import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 import de.inovex.graph.demo.anim.Rotate3dAnimation;
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider;
@@ -188,12 +199,102 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 			mProgressBar.setMax(42);
 		} else {
 			mProgressBar.setMax(total);			
-		}		
+		}	
+		
+		mContainer.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener() {
+				    @Override
+				    public void onClick(DialogInterface dialog, int which) {
+				        switch (which){
+				        case DialogInterface.BUTTON_POSITIVE:
+				            //Yes button clicked
+							if (isExternalStorageAvail()) {
+					               new ExportDatabaseFileTask().execute("");
+					            } else {
+					               Toast.makeText(getActivity(), "External storage is not available, unable to export data.", Toast.LENGTH_SHORT).show();
+					            }
+				            break;
+
+				        case DialogInterface.BUTTON_NEGATIVE:
+				            //No button clicked
+				            break;
+				        }
+				    }
+				};
+
+				AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+				builder.setMessage("What do you want to do?").setPositiveButton("export database", dialogClickListener)
+				    .setNegativeButton("cancel", dialogClickListener).show();
+			}
+		});
 		return mContainer;
 	}
-
-
 	
+	 private boolean isExternalStorageAvail() {
+	      return Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+	   }
+	 
+
+
+	private class ExportDatabaseFileTask extends AsyncTask<String, Void, Boolean> {
+	      private final ProgressDialog dialog = new ProgressDialog(getActivity());
+	 
+	      // can use UI thread here
+	      protected void onPreExecute() {
+	         this.dialog.setMessage("Exporting database...");
+	         this.dialog.show();
+	      }
+	 
+	      // automatically done on worker thread (separate from UI thread)
+	      protected Boolean doInBackground(final String... args) {
+	 
+	         File dbFile = new File(Environment.getDataDirectory() + "/data/de.inovex.graph.demo/databases/inovex_graph_demo");
+	 
+	         File exportDir = new File(Environment.getExternalStorageDirectory(), "inovex_graph_demo_data");
+	         if (!exportDir.exists()) {
+	            exportDir.mkdirs();
+	         }
+	         File file = new File(exportDir, dbFile.getName());
+	 
+	         try {
+	            file.createNewFile();
+	            this.copyFile(dbFile, file);
+	            return true;
+	         } catch (IOException e) {
+	            Log.e(UpdateFragment.class.getName(), e.getMessage(), e);
+	            return false;
+	         }
+	      }
+	 
+	      // can use UI thread here
+	      protected void onPostExecute(final Boolean success) {
+	         if (this.dialog.isShowing()) {
+	            this.dialog.dismiss();
+	         }
+	         if (success) {
+	            Toast.makeText(getActivity(), "Export successful!", Toast.LENGTH_SHORT).show();
+	         } else {
+	            Toast.makeText(getActivity(), "Export failed", Toast.LENGTH_SHORT).show();
+	         }
+	      }
+	 
+	      void copyFile(File src, File dst) throws IOException {
+	         FileChannel inChannel = new FileInputStream(src).getChannel();
+	         FileChannel outChannel = new FileOutputStream(dst).getChannel();
+	         try {
+	            inChannel.transferTo(0, inChannel.size(), outChannel);
+	         } finally {
+	            if (inChannel != null)
+	               inChannel.close();
+	            if (outChannel != null)
+	               outChannel.close();
+	         }
+	      }
+	 
+	   }
 	
 	@Override
 	public void onPause() {

@@ -88,7 +88,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 		mGaugeWind.setTotalNicks(50);
 		mGaugeWind.setScaleInterval(3);
 		mGaugeWind.setRimColor(getColorForType(POWER_TYPE.ONSHORE_WIND));
-
+		
 		FragmentTransaction transaction = getFragmentManager().beginTransaction();
 		DataFragment cache = new DataFragment();
 		transaction.add(cache, DataFragment.class.getSimpleName());

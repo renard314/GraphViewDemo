@@ -7,11 +7,14 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.graphics.LightingColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
@@ -226,7 +229,7 @@ public final class Thermometer extends View {
 
 		logoPaint = new Paint();
 		logoPaint.setFilterBitmap(true);
-		logo = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.logo);
+		logo = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.logo_white);
 		logoMatrix = new Matrix();
 		logoScale = (1.0f / logo.getWidth()) * 0.3f;;
 		logoMatrix.setScale(logoScale, logoScale);
@@ -344,6 +347,7 @@ public final class Thermometer extends View {
 		canvas.translate(0.5f - logo.getWidth() * logoScale / 2.0f, 
 						 0.5f - logo.getHeight() * logoScale / 2.0f);
 
+		
 		int color = 0x00000000;
 		float position = getRelativeTemperaturePosition();
 		if (position < 0) {
@@ -353,8 +357,11 @@ public final class Thermometer extends View {
 		}
 		//Log.d(TAG, "*** " + Integer.toHexString(color));
 		LightingColorFilter logoFilter = new LightingColorFilter(0xff338822, color);
-		logoPaint.setColorFilter(logoFilter);
+		ColorFilter filter = new ColorFilter();		
+		logoPaint.setColor(Color.WHITE);
+		logoPaint.setColorFilter(new PorterDuffColorFilter(rimCirclePaint.getColor(),PorterDuff.Mode.MULTIPLY));
 		
+
 		canvas.drawBitmap(logo, logoMatrix, logoPaint);
 		canvas.restore();		
 	}
