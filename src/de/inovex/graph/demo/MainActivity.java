@@ -9,6 +9,11 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ViewFlipper;
+
+import com.jjoe64.graphview.GraphView.MarkerPositionListener;
+import com.jjoe64.graphview.GraphViewSeries;
+import com.jjoe64.graphview.GraphViewSeries.GraphViewData;
+
 import de.inovex.graph.demo.DataFragment.LoaderFinishedListener;
 import de.inovex.graph.demo.MapView.Location;
 import de.inovex.graph.demo.contentprovider.RWELiveDataContentProvider.POWER_TYPE;

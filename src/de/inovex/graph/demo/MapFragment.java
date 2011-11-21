@@ -7,6 +7,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import com.jjoe64.graphview.GraphViewSeries;
+
 import de.inovex.graph.demo.MapView.Location;
 
 public class MapFragment extends Fragment{

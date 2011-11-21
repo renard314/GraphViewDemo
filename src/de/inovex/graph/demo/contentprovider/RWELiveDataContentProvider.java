@@ -229,7 +229,12 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
 					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
-			selection = "l.type LIKE \"%Wasser%\"";
+			if (selection!=null){
+
+				selection += " AND l.type LIKE \"%Wasser%\"";
+			} else {
+				selection = "l.type LIKE \"%Wasser%\"";				
+			}
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL_BIO:
@@ -240,7 +245,11 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
 					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
-			selection = "l.type LIKE \"%Bio%\"";
+			if (selection!=null){
+				selection += " AND l.type LIKE \"%Bio%\"";
+			} else {
+				selection = "l.type LIKE \"%Bio%\"";				
+			}
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL_WIND:
@@ -251,7 +260,11 @@ public class RWELiveDataContentProvider extends ContentProvider {
 			projection = new String[] { "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED + " AS created",
 					"SUM(p." + RWELiveDataContentProvider.Columns.ProductionData.VALUE + ") AS " + Columns.ProductionData.TOTAL };
 			groupBy = "p." + RWELiveDataContentProvider.Columns.ProductionData.CREATED;
-			selection = "l.type LIKE \"%Wind%\"";
+			if (selection!=null){
+				selection += " AND l.type LIKE \"%Wind%\"";				
+			} else {
+				selection = "l.type LIKE \"%Wind%\"";
+			}
 			sortOrder = "p.created ASC";
 			break;
 		case PRODUCTION_DATA_TOTAL:

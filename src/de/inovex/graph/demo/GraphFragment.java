@@ -6,6 +6,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.jjoe64.graphs.LineGraphView;
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.GraphView.MarkerPositionListener;
+import com.jjoe64.graphview.GraphViewSeries;
+
 public class GraphFragment extends Fragment {
 	
 	@SuppressWarnings(value = { "unused" })

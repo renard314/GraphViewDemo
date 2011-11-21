@@ -7,8 +7,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
-import android.graphics.LightingColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -155,6 +153,7 @@ public final class Thermometer extends View {
 	}
 
 	private void initDrawingTools() {
+		this.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 		rimRect = new RectF(0.1f, 0.1f, 0.9f, 0.9f);
 
 		// the linear gradient is a bit skewed for realism
@@ -177,11 +176,8 @@ public final class Thermometer extends View {
 		faceRect.set(rimRect.left + rimSize, rimRect.top + rimSize, 
 			     rimRect.right - rimSize, rimRect.bottom - rimSize);		
 
-		faceTexture = BitmapFactory.decodeResource(getContext().getResources(), 
-				   R.drawable.plastic);
-		BitmapShader paperShader = new BitmapShader(faceTexture, 
-												    Shader.TileMode.MIRROR, 
-												    Shader.TileMode.MIRROR);
+		faceTexture = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.plastic);
+		BitmapShader paperShader = new BitmapShader(faceTexture, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR);
 		Matrix paperMatrix = new Matrix();
 		facePaint = new Paint();
 		facePaint.setFilterBitmap(true);
@@ -231,25 +227,26 @@ public final class Thermometer extends View {
 		logoPaint.setFilterBitmap(true);
 		logo = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.logo_white);
 		logoMatrix = new Matrix();
-		logoScale = (1.0f / logo.getWidth()) * 0.3f;;
+		logoScale = (1.0f / logo.getWidth()) * 0.3f;
 		logoMatrix.setScale(logoScale, logoScale);
+		
+		handPath = new Path();
+		handPath.moveTo(0.5f, (0.5f + 0.2f));
+		handPath.lineTo((0.5f - 0.010f), (0.5f + 0.2f - 0.007f));
+		handPath.lineTo((0.5f - 0.002f), (0.5f - 0.32f));
+		handPath.lineTo((0.5f + 0.002f), (0.5f - 0.32f));
+		handPath.lineTo((0.5f + 0.010f), (0.5f + 0.2f - 0.007f));
+		handPath.lineTo((0.5f), (0.5f + 0.2f));
+		handPath.addCircle(0.5f, 0.5f, 0.025f, Path.Direction.CW);
+
 
 		handPaint = new Paint();
 		handPaint.setAntiAlias(true);
-		//handPaint.setColor(0xff392f2c);		
-		handPaint.setColor(0xffc7d4c2);		
+		handPaint.setColor(Color.WHITE);		
+		//handPaint.setColor(0xffc7d4c2);		
 		handPaint.setShadowLayer(0.01f, -0.005f, -0.005f, 0x7f000000);
 		handPaint.setStyle(Paint.Style.FILL);	
-		
-		handPath = new Path();
-		handPath.moveTo(0.5f, 0.5f + 0.2f);
-		handPath.lineTo(0.5f - 0.010f, 0.5f + 0.2f - 0.007f);
-		handPath.lineTo(0.5f - 0.002f, 0.5f - 0.32f);
-		handPath.lineTo(0.5f + 0.002f, 0.5f - 0.32f);
-		handPath.lineTo(0.5f + 0.010f, 0.5f + 0.2f - 0.007f);
-		handPath.lineTo(0.5f, 0.5f + 0.2f);
-		handPath.addCircle(0.5f, 0.5f, 0.025f, Path.Direction.CW);
-		
+				
 		handScrewPaint = new Paint();
 		handScrewPaint.setAntiAlias(true);
 		handScrewPaint.setColor(0xff493f3c);
@@ -355,9 +352,8 @@ public final class Thermometer extends View {
 		} else {
 			color |= ((int) ((0xf0) * position)) << 16; // red			
 		}
-		//Log.d(TAG, "*** " + Integer.toHexString(color));
-		LightingColorFilter logoFilter = new LightingColorFilter(0xff338822, color);
-		ColorFilter filter = new ColorFilter();		
+//		LightingColorFilter logoFilter = new LightingColorFilter(0xff338822, color);
+//		ColorFilter filter = new ColorFilter();		
 		logoPaint.setColor(Color.WHITE);
 		logoPaint.setColorFilter(new PorterDuffColorFilter(rimCirclePaint.getColor(),PorterDuff.Mode.MULTIPLY));
 		
@@ -368,12 +364,13 @@ public final class Thermometer extends View {
 
 	private void drawHand(Canvas canvas) {
 		if (handInitialized) {
+
 			float handAngle = degreeToAngle(handPosition);
 			canvas.save(Canvas.MATRIX_SAVE_FLAG);
 			canvas.rotate(handAngle, 0.5f, 0.5f);
 			canvas.drawPath(handPath, handPaint);
 			canvas.restore();
-			
+
 			canvas.drawCircle(0.5f, 0.5f, 0.01f, handScrewPaint);
 		}
 	}
@@ -395,9 +392,12 @@ public final class Thermometer extends View {
 		canvas.scale(scale, scale);
 
 		drawLogo(canvas);
+		
 		drawHand(canvas);
 		
 		canvas.restore();
+
+
 	
 		if (handNeedsToMove()) {
 			moveHand();
