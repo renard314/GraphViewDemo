@@ -17,7 +17,7 @@ public class GraphFragment extends Fragment {
 	private static final String DEBUG_TAG = GraphFragment.class.getName();
 	
 	private LineGraphView mGraphView;
-	private static final int VIEWPORT_SIZE = 15 * 60 * 1000;
+	private static final int VIEWPORT_SIZE = 144 * 60 * 1000;
 
 
 	@Override

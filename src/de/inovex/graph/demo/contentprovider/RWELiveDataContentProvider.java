@@ -1,25 +1,25 @@
 package de.inovex.graph.demo.contentprovider;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
+import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.database.sqlite.SQLiteStatement;
 import android.net.Uri;
-import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -112,48 +112,48 @@ public class RWELiveDataContentProvider extends ContentProvider {
 
 		private static final String LOCATION_TABLE_NAME = "locations";
 		private static final String PRODUCTION_DATA_TABLE_NAME = "production_data";
-		private static final int DATABASE_VERSION = 97;
+		private static final int DATABASE_VERSION = 99;
 
-		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " + Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, " + Columns.Locations.CREATED + " INTEGER, " + Columns.Locations.NAME + " TEXT, " + Columns.Locations.TYPE
-				+ " TEXT, " + Columns.Locations.CITY + " TEXT, " + Columns.Locations.COUNTRY + " TEXT, " + Columns.Locations.GOLIVE + " TEXT, " + Columns.Locations.XPOS + " INTEGER, "
-				+ Columns.Locations.YPOS + " INTEGER, " + Columns.Locations.LAST_PRODUCTION + " INTEGER, " + Columns.Locations.TURBINES + " INTEGER, " + Columns.Locations.POWER + " TEXT );";
-
-		private static final String PRODUCTION_DATA_TABLE_CREATE = "CREATE TABLE " + PRODUCTION_DATA_TABLE_NAME + " ( " + Columns.ProductionData.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-				+ Columns.ProductionData.CREATED + " INTEGER, " + Columns.ProductionData.VALUE + " INTEGER, " + Columns.ProductionData.LOCATION_ID + " TEXT);";
+//		private static final String LOCATION_TABLE_CREATE = "CREATE TABLE " + LOCATION_TABLE_NAME + " ( " + Columns.Locations.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+//				+ Columns.Locations.LOCATION_ID + " TEXT UNIQUE ON CONFLICT REPLACE, " + Columns.Locations.CREATED + " INTEGER, " + Columns.Locations.NAME + " TEXT, " + Columns.Locations.TYPE
+//				+ " TEXT, " + Columns.Locations.CITY + " TEXT, " + Columns.Locations.COUNTRY + " TEXT, " + Columns.Locations.GOLIVE + " TEXT, " + Columns.Locations.XPOS + " INTEGER, "
+//				+ Columns.Locations.YPOS + " INTEGER, " + Columns.Locations.LAST_PRODUCTION + " INTEGER, " + Columns.Locations.TURBINES + " INTEGER, " + Columns.Locations.POWER + " TEXT );";
+//
+//		private static final String PRODUCTION_DATA_TABLE_CREATE = "CREATE TABLE " + PRODUCTION_DATA_TABLE_NAME + " ( " + Columns.ProductionData.ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+//				+ Columns.ProductionData.CREATED + " INTEGER, " + Columns.ProductionData.VALUE + " INTEGER, " + Columns.ProductionData.LOCATION_ID + " TEXT);";
 
 		private static final String DATABASE_NAME = "inovex_graph_demo";
-
+		private Context mContext;
 		DBHelper(Context context) {
 			super(context, DATABASE_NAME, null, DATABASE_VERSION);
-			/*
-			try {
-				Log.i(RWELiveDataContentProvider.class.getName(),"Checking for backup at : " + Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
-				File backup = new File(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
-				if (backup.exists()){
-					Log.i(RWELiveDataContentProvider.class.getName(),"Backup found!");
-					boolean success = context.deleteDatabase(DATABASE_NAME);
-					if (success) {
-						Log.i(RWELiveDataContentProvider.class.getName(),"old database deleted!");
-						copyDataBase();
-					}
-					else {
-						Log.i(RWELiveDataContentProvider.class.getName(),"old database NOT deleted!");
-					}
-				}
-
-			} catch (SQLiteException e) {
-				e.printStackTrace();
-				Log.i(RWELiveDataContentProvider.class.getName(),"import error ");
-			}
-			*/
-
+			mContext = context;
 		}
+		
+		 private boolean checkDataBase(){
+			 
+		    	SQLiteDatabase checkDB = null;
+		 
+		    	try{
+		    		String myPath =  "/data/data/de.inovex.graph.demo/databases/inovex_graph_demo";
+		    		checkDB = SQLiteDatabase.openDatabase(myPath, null, SQLiteDatabase.OPEN_READONLY);
+		 
+		    	}catch(SQLiteException e){
+		 
+		    		//database does't exist yet.
+		 
+		    	}
+		 
+		    	if(checkDB != null){
+		 
+		    		checkDB.close();
+		 
+		    	}
+		 
+		    	return checkDB != null ? true : false;
+		    }
 
 		@Override
 		public void onCreate(SQLiteDatabase db) {
-			db.execSQL(LOCATION_TABLE_CREATE);
-			db.execSQL(PRODUCTION_DATA_TABLE_CREATE);
 		}
 
 		/**
@@ -164,11 +164,8 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		 */
 		private void copyDataBase() {
 			try {
-				// Open your local db as the input stream
-				File backup = new File(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
-				
-//				InputStream myInput = mContext.openFileInput(Environment.getExternalStorageDirectory() + "/inovex_graph_demo_data/inovex_graph_demo");
-				InputStream myInput = new FileInputStream(backup);
+				AssetManager assets = mContext.getAssets();
+				InputStream myInput = assets.open(DATABASE_NAME);
 				// Path to the just created empty db
 				String outFileName = "/data/data/de.inovex.graph.demo/databases/inovex_graph_demo";
 				// Open the empty db as the output stream
@@ -194,10 +191,8 @@ public class RWELiveDataContentProvider extends ContentProvider {
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 
-			Log.w(TAG, "Upgrading database from version " + oldVersion +" to " + newVersion + ", which will destroy all old data");
-			db.execSQL("DROP TABLE IF EXISTS " + LOCATION_TABLE_NAME);
-			db.execSQL("DROP TABLE IF EXISTS " + PRODUCTION_DATA_TABLE_NAME);
-			onCreate(db);
+			//Log.w(TAG, "Upgrading database from version " + oldVersion +" to " + newVersion + ", which will destroy all old data");
+			//onCreate(db);
 		}
 
 	}
@@ -208,6 +203,17 @@ public class RWELiveDataContentProvider extends ContentProvider {
 	@Override
 	public boolean onCreate() {
 		dbHelper = new DBHelper(getContext());
+		if (!dbHelper.checkDataBase()){
+			dbHelper.getReadableDatabase();
+			dbHelper.copyDataBase();
+			SQLiteDatabase backup = dbHelper.getWritableDatabase();
+			backup.close();
+			backup = dbHelper.getWritableDatabase();
+			backup.execSQL("DELETE FROM production_data WHERE created<1321388353770 OR created>1321441881270;");
+			//backup.execSQL("DELETE FROM production_data WHERE ROWID%2=0");
+			backup.close();
+
+		}
 		mLocationCounter = dbHelper.getReadableDatabase().compileStatement("select count(*) from locations;");
 		return true;
 	}

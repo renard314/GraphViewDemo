@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ViewFlipper;
+import android.widget.ViewSwitcher;
 
 import com.jjoe64.graphview.GraphView.MarkerPositionListener;
 import com.jjoe64.graphview.GraphViewSeries;
@@ -31,6 +32,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 
 	private GraphFragment mGraphFragment;
 	private MapFragment mMapFragment;
+	private ViewSwitcher mGraphViewSwitcher;
 	private Thermometer mGaugeWind;
 	private Thermometer mGaugeWater;
 	private Thermometer mGaugeBio;
@@ -89,6 +91,9 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 		mGaugeWind.setScaleInterval(3);
 		mGaugeWind.setRimColor(getColorForType(POWER_TYPE.ONSHORE_WIND));
 		
+		mGraphViewSwitcher = (ViewSwitcher) findViewById(R.id.graph_container);
+		mGraphFragment.setMarkerPositionListener(this);
+
 		FragmentTransaction transaction = getFragmentManager().beginTransaction();
 		DataFragment cache = new DataFragment();
 		transaction.add(cache, DataFragment.class.getSimpleName());
@@ -125,7 +130,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 
 	@Override
 	public void onMarkerPositionChanged(double oldPos, double newPos) {
-		if (DataFragment.productionByType.size() > 0) {
+		if (DataFragment.productionByType.size() >0) {
 
 			GraphViewSeries series = DataFragment.productionByType.get(POWER_TYPE.BIOMASS);
 			if (series != null) {
@@ -187,16 +192,27 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 
 	@Override
 	public void onLoadFinished(int loaderId) {
-		Log.i(DEBUG_TAG, "onLoadFinished =" + loaderId);
 		switch (loaderId) {
 		case DataFragment.PRODUCTION_LOADER_BIO:
-			mGraphFragment.addSeriesToGraph(DataFragment.productionByType.get(POWER_TYPE.BIOMASS));
+			GraphViewSeries series = DataFragment.productionByType.get(POWER_TYPE.BIOMASS);
+			mGraphFragment.addSeriesToGraph(series);
+			double middle = (series.getMaxX()-series.getMinX())/2;
+			GraphViewData nearest = series.getNearestValue(middle);
+			upDateGauge(POWER_TYPE.BIOMASS, mMaxBioPower, nearest.valueX);
 			break;
 		case DataFragment.PRODUCTION_LOADER_WATER:
-			mGraphFragment.addSeriesToGraph(DataFragment.productionByType.get(POWER_TYPE.WATER));
+			series = DataFragment.productionByType.get(POWER_TYPE.WATER);
+			mGraphFragment.addSeriesToGraph(series);
+			middle = (series.getMaxX()-series.getMinX())/2;
+			nearest = series.getNearestValue(middle);
+			upDateGauge(POWER_TYPE.WATER, mMaxWaterPower, nearest.valueX);
 			break;
 		case DataFragment.PRODUCTION_LOADER_WIND:
-			mGraphFragment.addSeriesToGraph(DataFragment.productionByType.get(POWER_TYPE.ONSHORE_WIND));
+			series = DataFragment.productionByType.get(POWER_TYPE.ONSHORE_WIND);
+			mGraphFragment.addSeriesToGraph(series);
+			middle = (series.getMaxX()-series.getMinX())/2;
+			nearest = series.getNearestValue(middle);
+			upDateGauge(POWER_TYPE.ONSHORE_WIND, mMaxWindPower, nearest.valueX);
 			break;
 		case DataFragment.PLACES_LOADER:
 			mMapFragment.loadMap();
@@ -205,7 +221,28 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 		case DataFragment.PRODUCTION_LOADER_TOTAL:
 			// mGraphFragment.addSeriesToGraph(DataCache.mTotalSeries);
 			break;
-
 		}
+		mLoadCounter--;
+		if (mLoadCounter==0){
+			hideSpinner();
+		}
+		
+	}
+	private int mLoadCounter = 0;
+
+	private void showSpinner(){
+		mGraphViewSwitcher.setDisplayedChild(1);
+	}
+	private void hideSpinner(){
+		mGraphViewSwitcher.setDisplayedChild(0);
+	}
+
+	@Override
+	public void onLoadStarted(int loaderId) {
+		if (mLoadCounter==0){
+			showSpinner();
+		}
+		mLoadCounter++;
+		
 	}
 }

@@ -39,23 +39,43 @@
         >
         </de.inovex.mindtherobot.Thermometer>
     </ViewFlipper>
-    <fragment
-    	class="de.inovex.graph.demo.GraphFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        <ViewSwitcher
+        android:id="@+id/graph_container" 
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_toRightOf="@+id/map_fragment"
         android:layout_alignParentRight="true"
         android:layout_marginLeft="15dp"
         android:layout_below="@+id/update_fragment"
-        android:id="@+id/graph_fragment">
-        <!-- Preview: layout=@layout/graph_fragment -->
-    </fragment>
+        android:inAnimation="@android:anim/fade_in"
+        android:outAnimation="@android:anim/fade_out"
+        
+        
+        >
+	         <fragment
+	    	class="de.inovex.graph.demo.GraphFragment"
+	        android:layout_width="match_parent"
+	        android:layout_height="match_parent"
+	        android:id="@+id/graph_fragment">
+	        <!-- Preview: layout=@layout/graph_fragment -->
+	    	</fragment>
+	    	<ProgressBar
+	    	    android:id="@+id/progress_loading"
+		        android:layout_width="100dp"
+	    	    android:layout_height="100dp"
+	    	    android:layout_gravity="center"
+	    	    android:indeterminate="true"
+	    	/>            
+         </ViewSwitcher>
+        
+
+    <!--
     <fragment
     	class="de.inovex.graph.demo.UpdateFragment"
         android:layout_width="match_parent"
         android:layout_height="50dip"
         android:layout_alignParentTop="true"
         android:id="@+id/update_fragment">
-        <!-- Preview: layout=@layout/update_fragment -->
     </fragment>
+    -->
 </RelativeLayout>

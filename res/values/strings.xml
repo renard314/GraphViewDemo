@@ -13,4 +13,5 @@
     <string name="label_turbines">Turbinen</string>
     <string name="label_type">Typ</string>
     <string name="label_power">Leistung</string>
+    <string name="title_progress_dialog">Daten werden geladen. Bitte einen Moment Geduld.</string>
 </resources>
