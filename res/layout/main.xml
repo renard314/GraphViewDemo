@@ -69,7 +69,6 @@
          </ViewSwitcher>
         
 
-    <!--
     <fragment
     	class="de.inovex.graph.demo.UpdateFragment"
         android:layout_width="match_parent"
@@ -77,5 +76,4 @@
         android:layout_alignParentTop="true"
         android:id="@+id/update_fragment">
     </fragment>
-    -->
 </RelativeLayout>

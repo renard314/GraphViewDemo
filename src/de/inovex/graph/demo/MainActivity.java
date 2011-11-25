@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.FragmentTransaction;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -12,8 +11,8 @@ import android.widget.ViewFlipper;
 import android.widget.ViewSwitcher;
 
 import com.jjoe64.graphview.GraphView.MarkerPositionListener;
+import com.jjoe64.graphview.GraphViewData;
 import com.jjoe64.graphview.GraphViewSeries;
-import com.jjoe64.graphview.GraphViewSeries.GraphViewData;
 
 import de.inovex.graph.demo.DataFragment.LoaderFinishedListener;
 import de.inovex.graph.demo.MapView.Location;
@@ -64,7 +63,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 				mGaugeContainer.setDisplayedChild(currentChild);
 			}
 		});
-		
+
 		mGaugeWind = (Thermometer) findViewById(R.id.gauge_wind);
 		mGaugeWater = (Thermometer) findViewById(R.id.gauge_water);
 		mGaugeBio = (Thermometer) findViewById(R.id.gauge_bio);
@@ -90,7 +89,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 		mGaugeWind.setTotalNicks(50);
 		mGaugeWind.setScaleInterval(3);
 		mGaugeWind.setRimColor(getColorForType(POWER_TYPE.ONSHORE_WIND));
-		
+
 		mGraphViewSwitcher = (ViewSwitcher) findViewById(R.id.graph_container);
 		mGraphFragment.setMarkerPositionListener(this);
 
@@ -130,7 +129,7 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 
 	@Override
 	public void onMarkerPositionChanged(double oldPos, double newPos) {
-		if (DataFragment.productionByType.size() >0) {
+		if (DataFragment.productionByType.size() > 0) {
 
 			GraphViewSeries series = DataFragment.productionByType.get(POWER_TYPE.BIOMASS);
 			if (series != null) {
@@ -143,15 +142,14 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 					mMapFragment.updateMap(nearest.valueX);
 				}
 			}
-		}		
+		}
 	}
 
-	
 	private double mLastStart = -1;
 
 	private void upDateGauge(POWER_TYPE type, final int maxPower, final double posX) {
 		GraphViewSeries series = DataFragment.productionByType.get(type);
-		if (series != null) {
+		if (series != null && series.size()>0) {
 
 			final GraphViewData nearest = series.getNearestValue(posX);
 			final float y = (float) nearest.valueY;
@@ -170,8 +168,8 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 			}
 		}
 	}
-	
-	private void calculateMaxProductions(){
+
+	private void calculateMaxProductions() {
 		mMaxBioPower = 0;
 		mMaxWaterPower = 0;
 		mMaxWindPower = 0;
@@ -195,54 +193,60 @@ public class MainActivity extends Activity implements MarkerPositionListener, Lo
 		switch (loaderId) {
 		case DataFragment.PRODUCTION_LOADER_BIO:
 			GraphViewSeries series = DataFragment.productionByType.get(POWER_TYPE.BIOMASS);
-			mGraphFragment.addSeriesToGraph(series);
-			double middle = (series.getMaxX()-series.getMinX())/2;
-			GraphViewData nearest = series.getNearestValue(middle);
-			upDateGauge(POWER_TYPE.BIOMASS, mMaxBioPower, nearest.valueX);
+			if (series.size() > 0) {
+				mGraphFragment.addSeriesToGraph(series);
+				double middle = (series.getMaxX() - series.getMinX()) / 2;
+				GraphViewData nearest = series.getNearestValue(middle);
+				upDateGauge(POWER_TYPE.BIOMASS, mMaxBioPower, nearest.valueX);
+			}
 			break;
 		case DataFragment.PRODUCTION_LOADER_WATER:
 			series = DataFragment.productionByType.get(POWER_TYPE.WATER);
-			mGraphFragment.addSeriesToGraph(series);
-			middle = (series.getMaxX()-series.getMinX())/2;
-			nearest = series.getNearestValue(middle);
-			upDateGauge(POWER_TYPE.WATER, mMaxWaterPower, nearest.valueX);
+			if (series.size() > 0) {
+				mGraphFragment.addSeriesToGraph(series);
+				double middle = (series.getMaxX() - series.getMinX()) / 2;
+				GraphViewData nearest = series.getNearestValue(middle);
+				upDateGauge(POWER_TYPE.WATER, mMaxWaterPower, nearest.valueX);
+			}
 			break;
 		case DataFragment.PRODUCTION_LOADER_WIND:
 			series = DataFragment.productionByType.get(POWER_TYPE.ONSHORE_WIND);
-			mGraphFragment.addSeriesToGraph(series);
-			middle = (series.getMaxX()-series.getMinX())/2;
-			nearest = series.getNearestValue(middle);
-			upDateGauge(POWER_TYPE.ONSHORE_WIND, mMaxWindPower, nearest.valueX);
+			if (series.size() > 0) {
+				mGraphFragment.addSeriesToGraph(series);
+				double middle = (series.getMaxX() - series.getMinX()) / 2;
+				GraphViewData nearest = series.getNearestValue(middle);
+				upDateGauge(POWER_TYPE.ONSHORE_WIND, mMaxWindPower, nearest.valueX);
+			}
 			break;
 		case DataFragment.PLACES_LOADER:
 			mMapFragment.loadMap();
 			calculateMaxProductions();
 			break;
-		case DataFragment.PRODUCTION_LOADER_TOTAL:
-			// mGraphFragment.addSeriesToGraph(DataCache.mTotalSeries);
-			break;
+
 		}
 		mLoadCounter--;
-		if (mLoadCounter==0){
+		if (mLoadCounter == 0) {
 			hideSpinner();
 		}
-		
+
 	}
+
 	private int mLoadCounter = 0;
 
-	private void showSpinner(){
+	private void showSpinner() {
 		mGraphViewSwitcher.setDisplayedChild(1);
 	}
-	private void hideSpinner(){
+
+	private void hideSpinner() {
 		mGraphViewSwitcher.setDisplayedChild(0);
 	}
 
 	@Override
 	public void onLoadStarted(int loaderId) {
-		if (mLoadCounter==0){
+		if (mLoadCounter == 0) {
 			showSpinner();
 		}
 		mLoadCounter++;
-		
+
 	}
 }

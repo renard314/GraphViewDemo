@@ -61,7 +61,7 @@ public class UpdateFragment extends Fragment implements OnSharedPreferenceChange
 	private Calendar mCalendar;
 	private final static String mFormat = "mm:ss";
 	private String mProgressMessage;
-	public static final int TIME_TO_UPDATE = 60*2; //Time between updates in seconds
+	public static final int TIME_TO_UPDATE = 60*60; //Time between updates in seconds
 	private int mUpdateCounter = TIME_TO_UPDATE;
 	private final static int REQUEST_CODE = 0;
 	private final UpdateReceiver mUpdateReceiver = new UpdateReceiver();
